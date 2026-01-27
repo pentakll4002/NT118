@@ -1,2 +1,40 @@
-# NT118
-Repository đồ án môn học NT118 - Phát triển ứng dụng trên thiết bị di động
+
+<p align="center">
+  <a href="https://www.uit.edu.vn/" title="Trường Đại học Công nghệ Thông tin" style="border: none;">
+    <img src="https://i.imgur.com/WmMnSRt.png" alt="Trường Đại học Công nghệ Thông tin | University of Information Technology">
+  </a>
+</p>
+
+<h1 align="center"><b>PHÁT TRIỂN ỨNG DỤNG TRÊN THIẾT BỊ DI ĐỘNG - NT118</b></h1>
+
+## GIỚI THIỆU MÔN HỌC
+
+-    **Tên môn học:** Phát triển ứng dụng trên thiết bị di động
+-    **Mã môn học:** NT118
+-    **Mã lớp:** NT118.Q22
+-    **Năm học:** HK2 (2025 - 2026)
+-    **Giảng viên:** Ths.Trần Hồng Nghi
+-    
+## GIỚI THIỆU ĐỒ ÁN
+
+-    **Đề tài:** Quản lí đề tài
+-    **Repository:** 
+-    **Behance:** 
+-    **Trang giới thiệu nhóm:** 
+
+## CÔNG NGHỆ SỬ DỤNG
+
+-    **Backend:** [ASP.NET](https://dotnet.microsoft.com/en-us/apps/aspnet), [Python](https://www.python.org/) 
+-    **Frontend:** [React Native](https://reactnative.dev/), [Figma](https://www.figma.com/community), [Tailwind](https://tailwindcss.com/)
+-    **Database:** [MongoDB](https://www.mongodb.com/?msockid=1378f47ead6662d522cce241ac8363bd)
+## THÀNH VIÊN NHÓM
+
+| STT | MSSV     | Họ và Tên            | GitHub                              | Email                   |
+| :-- | :------- | :------------------- | :---------------------------------- | :---------------------- |
+| 1   | 23520003 | Đặng Thiên Ân        | https://github.com/pentakll4002     | 23520003@gm.uit.edu.vn  |
+| 2   | 23520022 | Nguyễn Văn Ân        | https://github.com/Annv11022005     | 23520022@gm.uit.edu.vn  |
+| 3   | 23520131 | Nguyễn Võ Ngọc Bảo   | https://github.com/AdamNbz          | 23520131@gm.uit.edu.vn  |
+
+## GIAO DIỆN
+-   **Link:** [Figma](https://www.figma.com/design/incT5SSdbOWXhxuuGioBsx/Untitled?node-id=0-1&p=f&t=wQqMVH9YtCWGE9EN-0)
+
