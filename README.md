@@ -51,6 +51,10 @@
 -    **AI Service:** [FastAPI](https://fastapi.tiangolo.com/) - AI Search (semantic) + AI Chatbot (RAG)
 -    **Frontend:** [React Native](https://reactnative.dev/), [Figma](https://www.figma.com/community), [Tailwind](https://tailwindcss.com/)
 -    **Database:** [PostgreSQL](https://www.postgresql.org/) + [pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)
+-    **Realtime:** [SignalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr)
+-    **Containerization:** [Docker](https://www.docker.com/)
+-    **Cloud/Deployment:** [Microsoft Azure](https://azure.microsoft.com/en-us)
+
 ## THÀNH VIÊN NHÓM
 
 | STT | MSSV     | Họ và Tên            | GitHub                              | Email                   |
