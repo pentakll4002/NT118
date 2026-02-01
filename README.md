@@ -14,19 +14,47 @@
 -    **Mã lớp:** NT118.Q22
 -    **Năm học:** HK2 (2025 - 2026)
 -    **Giảng viên:** Ths.Trần Hồng Nghi
--    
+
 ## GIỚI THIỆU ĐỒ ÁN
 
--    **Đề tài:** Quản lí đề tài
--    **Repository:** 
--    **Behance:** 
--    **Trang giới thiệu nhóm:** 
+-    **Đề tài:** ShopeeLite - ứng dụng sàn TMĐT
+-    **Mô tả:** Một phiên bản clone của ứng dụng sàn TMĐT nổi tiếng **Shopee**, với các tính năng cơ bản được tích hợp AI trong xử lý tìm kiếm và Chatbot.
+
+## CHỨC NĂNG CHÍNH
+
+- Đăng ký/ Đăng nhập
+- Quản lý tài khoản người dùng (thông tin, ảnh, số điện thoại, email, địa chỉ)
+- Tìm kiếm sản phẩm
+- Danh mục sản phẩm
+- Chi tiết sản phẩm
+- Lịch sử xem sản phẩm
+- Follow cửa hàng
+- Giỏ hàng
+- Thanh toán 
+- Quản lý đơn hàng
+- Quản lý địa chỉ giao hàng
+- Tin nhắn (Chat trực tiếp với người bán)
+- Thông báo khuyến mãi, tin nhắn, cập nhật đơn hàng
+- Đánh giá & review sản phẩm
+- Đánh dấu/ Yêu thích sản phẩm
+- Đăng ký cửa hàng
+- Quản lý đơn hàng
+- Quản lý sản phẩm
+- Quản lý doanh thu
+- Lưu trữ và quản lý voucher
+- Quản lý hệ thống
+- AI tìm kiếm sản phẩm theo nhu cầu
 
 ## CÔNG NGHỆ SỬ DỤNG
 
--    **Backend:** [ASP.NET](https://dotnet.microsoft.com/en-us/apps/aspnet), [Python](https://www.python.org/) 
--    **Frontend:** [React Native](https://reactnative.dev/), [Figma](https://www.figma.com/community), [Tailwind](https://tailwindcss.com/)
--    **Database:** [MongoDB](https://www.mongodb.com/?msockid=1378f47ead6662d522cce241ac8363bd)
+-    **Backend:** [ASP.NET](https://dotnet.microsoft.com/en-us/apps/aspnet)
+-    **AI Service:** [FastAPI](https://fastapi.tiangolo.com/) - AI Search (semantic) + AI Chatbot (RAG)
+-    **Frontend:** [React Native](https://reactnative.dev/), [TailwindCSS](https://tailwindcss.com/), [Figma](https://www.figma.com/community)
+-    **Database:** [PostgreSQL](https://www.postgresql.org/)
+-    **Realtime:** [SignalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr)
+-    **Containerization:** [Docker](https://www.docker.com/)
+-    **Cloud/Deployment:** [Microsoft Azure](https://azure.microsoft.com/en-us)
+
 ## THÀNH VIÊN NHÓM
 
 | STT | MSSV     | Họ và Tên            | GitHub                              | Email                   |
@@ -36,5 +64,5 @@
 | 3   | 23520131 | Nguyễn Võ Ngọc Bảo   | https://github.com/AdamNbz          | 23520131@gm.uit.edu.vn  |
 
 ## GIAO DIỆN
--   **Link:** [Figma](https://www.figma.com/design/incT5SSdbOWXhxuuGioBsx/Untitled?node-id=0-1&p=f&t=wQqMVH9YtCWGE9EN-0)
+-   **Link:** [Figma](https://www.figma.com/design/nj2vEsLnM0LlzEgOiVDNZ1/-NT118--ShopeeLite-UI-Design?node-id=0-1&t=WXwcgvlsl2rgeNJu-1)
 
