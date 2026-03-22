@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView, 
-  Dimensions 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  FontAwesome,
+  Ionicons,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -28,49 +32,66 @@ const LoginScreen = () => {
     router.push('/register' as any);
   };
 
+  const handleForgotPassword = () => {
+    router.push('/forgotPassword' as any)
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Chào mừng{"\n"}trở lại!</Text>
+          <Text style={styles.title}>Chào mừng{'\n'}trở lại!</Text>
         </View>
 
         {/* Form Inputs */}
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={24} color="#676767" style={styles.inputIcon} />
+            <Ionicons
+              name='person-outline'
+              size={24}
+              color='#676767'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Tên đăng nhập hoặc email"
-              placeholderTextColor="#676767"
+              placeholder='Tên đăng nhập hoặc email'
+              placeholderTextColor='#676767'
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
+              keyboardType='email-address'
+              autoCapitalize='none'
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#676767" style={styles.inputIcon} />
+            <Ionicons
+              name='lock-closed-outline'
+              size={24}
+              color='#676767'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Mật khẩu"
-              placeholderTextColor="#676767"
+              placeholder='Mật khẩu'
+              placeholderTextColor='#676767'
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons 
-                name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                size={24} 
-                color="#676767" 
+              <Ionicons
+                name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                size={24}
+                color='#676767'
               />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.forgotPasswordContainer}>
+          <TouchableOpacity
+            style={styles.forgotPasswordContainer}
+            onPress={handleForgotPassword}
+          >
             <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
           </TouchableOpacity>
         </View>
@@ -85,13 +106,13 @@ const LoginScreen = () => {
           <Text style={styles.socialDividerText}>- HOẶC tiếp tục với -</Text>
           <View style={styles.socialButtonsContainer}>
             <TouchableOpacity style={styles.socialButton}>
-              <FontAwesome name="google" size={28} color="#EA4335" />
+              <FontAwesome name='google' size={28} color='#EA4335' />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton}>
-              <FontAwesome name="apple" size={28} color="#000000" />
+              <FontAwesome name='apple' size={28} color='#000000' />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton}>
-              <FontAwesome name="facebook" size={28} color="#1877F2" />
+              <FontAwesome name='facebook' size={28} color='#1877F2' />
             </TouchableOpacity>
           </View>
         </View>
