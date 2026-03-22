@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const OnboardingScreen = () => {
+const SplashPayScreen = () => {
   const router = useRouter();
 
   const handleSkip = () => {
@@ -13,14 +13,14 @@ const OnboardingScreen = () => {
   };
 
   const handleNext = () => {
-    router.push('/splash-pay');
+    router.push('/splash-follow');
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Top Status Bar Placeholder */}
       <View style={{ width: SCREEN_WIDTH, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 21 }}>
-        <Text style={{ fontSize: 15, fontWeight: '500', color: 'black' }}>9:41</Text>
+        <Text style={{ fontSize: 15, fontWeight: '500', color: 'black', fontFamily: 'Poppins_500Medium' }}>9:41</Text>
       </View>
 
       {/* Header with Step and Skip */}
@@ -28,83 +28,78 @@ const OnboardingScreen = () => {
         flexDirection: 'row', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        paddingHorizontal: 17, 
+        paddingHorizontal: 15, 
         marginTop: 1, 
       }}>
         <View style={{ flexDirection: 'row' }}>
-          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600' }}>1</Text>
-          <Text style={{ color: '#A0A0A1', fontSize: 18, fontWeight: '600' }}>/3</Text>
+          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold' }}>2</Text>
+          <Text style={{ color: '#A0A0A1', fontSize: 18, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold' }}>/3</Text>
         </View>
-        <TouchableOpacity onPress={handleSkip}>
-          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600' }}>Skip</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold' }}>Skip</Text>
         </TouchableOpacity>
       </View>
 
       {/* Main Content Area */}
       <View style={{ flex: 1, alignItems: 'center' }}>
-        {/* Illustration Container */}
+        {/* Illustration Container [225px top in figma] */}
         <View style={{ 
-          width: 300, 
-          height: 300, 
-          marginTop: 88, 
+          width: 320, 
+          height: 240, 
+          marginTop: 136, 
           position: 'relative',
         }}>
-          {/* Layered SVG images from slashsp folder for better quality */}
+          {/* Layered images from slashtt folder using SVG for better quality */}
           <Image 
-            source={require('../../assets/images/slashsp/freepik--Shelf_2--inject-4.svg')}
+            source={require('../../assets/images/slashtt/freepik--Device--inject-2.svg')}
             style={{ width: '100%', height: '100%', position: 'absolute' }}
             contentFit="contain"
           />
           <Image 
-            source={require('../../assets/images/slashsp/freepik--Shelf_1--inject-4.svg')}
-            style={{ width: '100%', height: '100%', position: 'absolute' }}
-            contentFit="contain"
-          />
-          
-          {/* Midground - Counter and Clothes */}
-          <Image 
-            source={require('../../assets/images/slashsp/freepik--Counter--inject-4.svg')}
+            source={require('../../assets/images/slashtt/freepik--Tab--inject-2.svg')}
             style={{ width: '100%', height: '100%', position: 'absolute' }}
             contentFit="contain"
           />
           <Image 
-            source={require('../../assets/images/slashsp/freepik--Clothes--inject-4.svg')}
-            style={{ width: '100%', height: '100%', position: 'absolute' }}
-            contentFit="contain"
-          />
-
-          {/* Foreground - Character and Mannequin */}
-          <Image 
-            source={require('../../assets/images/slashsp/freepik--Character--inject-4.svg')}
+            source={require('../../assets/images/slashtt/freepik--character-1--inject-2.svg')}
             style={{ width: '100%', height: '100%', position: 'absolute' }}
             contentFit="contain"
           />
           <Image 
-            source={require('../../assets/images/slashsp/freepik--Mannequin--inject-4.svg')}
+            source={require('../../assets/images/slashtt/freepik--character-2--inject-2.svg')}
             style={{ width: '100%', height: '100%', position: 'absolute' }}
             contentFit="contain"
           />
-          
-          {/* Small Details */}
           <Image 
-            source={require('../../assets/images/slashsp/freepik--Boxes--inject-4.svg')}
+            source={require('../../assets/images/slashtt/freepik--speech-bubble-1--inject-2.svg')}
+            style={{ width: '100%', height: '100%', position: 'absolute' }}
+            contentFit="contain"
+          />
+          <Image 
+            source={require('../../assets/images/slashtt/freepik--speech-bubble-2--inject-2.svg')}
+            style={{ width: '100%', height: '100%', position: 'absolute' }}
+            contentFit="contain"
+          />
+          <Image 
+            source={require('../../assets/images/slashtt/freepik--Bags--inject-2.svg')}
             style={{ width: '100%', height: '100%', position: 'absolute' }}
             contentFit="contain"
           />
         </View>
 
         {/* Text Content */}
-        <View style={{ marginTop: 15, alignItems: 'center', paddingHorizontal: 17 }}>
+        <View style={{ marginTop: 27, alignItems: 'center', paddingHorizontal: 17 }}>
           <Text 
             style={{ 
               color: 'black', 
               fontSize: 24, 
               fontWeight: '800', 
               textAlign: 'center',
-              marginBottom: 15
+              marginBottom: 15,
+              fontFamily: 'Montserrat_800ExtraBold'
             }}
           >
-            Chọn sản phẩm
+            Thanh toán
           </Text>
 
           <Text 
@@ -115,42 +110,52 @@ const OnboardingScreen = () => {
               textAlign: 'center', 
               lineHeight: 24,
               letterSpacing: 0.28,
-              width: 340
+              width: 320,
+              fontFamily: 'Montserrat_600SemiBold'
             }}
           >
-            Khám phá hàng triệu sản phẩm từ thời trang, điện tử đến đồ gia dụng. Tìm món đồ yêu thích chỉ trong vài giây!
+            Thanh toán nhanh chóng và an toàn với nhiều phương thức: thẻ ngân hàng, hoặc thanh toán khi nhận hàng.
           </Text>
         </View>
       </View>
 
-      {/* Footer with Pagination and Next */}
+      {/* Footer with Pagination and Navigation [763px top in figma] */}
       <View style={{ 
         flexDirection: 'row', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        paddingHorizontal: 20, 
-        height: 100,
-        marginBottom: 20
+        paddingHorizontal: 21, 
+        paddingBottom: 40 
       }}>
-        <View style={{ width: 44 }} /> 
+        {/* Prev Button */}
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text 
+            style={{ 
+              color: '#C4C4C4', 
+              fontSize: 18, 
+              fontWeight: '600',
+              fontFamily: 'Montserrat_600SemiBold'
+            }}
+          >
+            Prev
+          </Text>
+        </TouchableOpacity>
         
         {/* Pagination Dots */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 40, height: 8, backgroundColor: '#17223B', borderRadius: 100 }} />
           <View style={{ width: 10, height: 10, backgroundColor: 'rgba(23, 34, 59, 0.20)', borderRadius: 100 }} />
+          <View style={{ width: 40, height: 8, backgroundColor: '#17223B', borderRadius: 100 }} />
           <View style={{ width: 10, height: 10, backgroundColor: 'rgba(23, 34, 59, 0.20)', borderRadius: 100 }} />
         </View>
 
         {/* Next Button */}
-        <TouchableOpacity 
-          onPress={handleNext}
-          style={{ paddingVertical: 10 }}
-        >
+        <TouchableOpacity onPress={handleNext}>
           <Text 
             style={{ 
               color: '#F83758', 
               fontSize: 18, 
-              fontWeight: '600'
+              fontWeight: '600',
+              fontFamily: 'Montserrat_600SemiBold'
             }}
           >
             Next
@@ -161,4 +166,4 @@ const OnboardingScreen = () => {
   );
 };
 
-export default OnboardingScreen;
+export default SplashPayScreen;
