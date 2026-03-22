@@ -4,7 +4,7 @@
     "slug": "src",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/Loading.svg",
+    "icon": "./assets/images/Loading.png",
     "scheme": "src",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -14,12 +14,13 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/Loading.svg",
-        "backgroundImage": "./assets/images/Loading.svg",
-        "monochromeImage": "./assets/images/Loading.svg"
+        "foregroundImage": "./assets/images/Loading.png",
+        "backgroundImage": "./assets/images/Loading.png",
+        "monochromeImage": "./assets/images/Loading.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.src"
     },
     "web": {
       "output": "static"
@@ -29,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Loading.svg",
+          "image": "./assets/images/Loading.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

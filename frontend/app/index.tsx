@@ -1,5 +1,5 @@
-import SplashScreen from '@/components/screen/SplashScreen';
+import SplashScreenComponent from '@/components/screen/SplashScreen';
 
 export default function AppLayout() {
-  return <SplashScreen />;
+  return <SplashScreenComponent />;
 }

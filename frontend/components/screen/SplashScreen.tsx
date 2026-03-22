@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -9,8 +9,15 @@ const SplashScreen = () => {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('SplashScreen mounted, setting timer...');
     const timer = setTimeout(() => {
-      router.replace('/onboarding');
+      console.log('Timer finished, attempting to replace with /onboarding');
+      try {
+        router.replace('/onboarding');
+        console.log('Navigation call executed');
+      } catch (e) {
+        console.error('Navigation error:', e);
+      }
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -94,7 +101,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#F83758',
     fontSize: 40,
-    fontFamily: 'LibreCaslonText_700Bold',
     fontWeight: '700',
     textAlign: 'center',
   },

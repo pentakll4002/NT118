@@ -7,24 +7,24 @@ const OnboardingScreen = () => {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Header with Step and Skip */}
-      <View className="flex-row justify-between px-5 pt-5 items-center">
-        <View className="flex-row items-center">
-          <Text className="text-black text-lg font-semibold" style={{ fontFamily: 'Montserrat_600SemiBold' }}>1</Text>
-          <Text className="text-neutral-400 text-lg font-semibold" style={{ fontFamily: 'Montserrat_600SemiBold' }}>/3</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600' }}>1</Text>
+          <Text style={{ color: '#A3A3A3', fontSize: 18, fontWeight: '600' }}>/3</Text>
         </View>
         <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
-          <Text className="text-black text-lg font-semibold" style={{ fontFamily: 'Montserrat_600SemiBold' }}>Skip</Text>
+          <Text style={{ color: 'black', fontSize: 18, fontWeight: '600' }}>Skip</Text>
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
-      <View className="flex-1 items-center justify-center px-10">
-        {/* Illustration Placeholder (as described in Figma data) */}
-        <View className="w-72 h-72 items-center justify-center bg-neutral-100 rounded-full mb-10 overflow-hidden">
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+        {/* Illustration Placeholder */}
+        <View style={{ width: 288, height: 288, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F5', borderRadius: 144, marginBottom: 40, overflow: 'hidden' }}>
              <Image 
-                source={require('../../assets/images/Group 34010.svg')}
+                source={require('../../assets/images/Group 34010.png')}
                 style={{ width: '80%', height: '80%' }}
                 contentFit="contain"
              />
@@ -32,35 +32,32 @@ const OnboardingScreen = () => {
 
         {/* Title */}
         <Text 
-          className="text-black text-3xl font-extrabold text-center mb-4"
-          style={{ fontFamily: 'Montserrat_800ExtraBold' }}
+          style={{ color: 'black', fontSize: 30, fontWeight: '800', textAlign: 'center', marginBottom: 16 }}
         >
           Chọn sản phẩm
         </Text>
 
         {/* Description */}
         <Text 
-          className="text-neutral-400 text-base font-semibold text-center leading-6"
-          style={{ fontFamily: 'Montserrat_600SemiBold' }}
+          style={{ color: '#A3A3A3', fontSize: 16, fontWeight: '600', textAlign: 'center', lineHeight: 24 }}
         >
           Khám phá hàng triệu sản phẩm từ thời trang, điện tử đến đồ gia dụng. Tìm món đồ yêu thích chỉ trong vài giây!
         </Text>
       </View>
 
       {/* Footer with Pagination and Next */}
-      <View className="flex-row items-center justify-between px-10 pb-10">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 40, paddingBottom: 40 }}>
         {/* Pagination Dots */}
-        <View className="flex-row items-center gap-2">
-          <View className="w-10 h-2.5 bg-slate-800 rounded-full" />
-          <View className="w-2.5 h-2.5 bg-slate-800 opacity-20 rounded-full" />
-          <View className="w-2.5 h-2.5 bg-slate-800 opacity-20 rounded-full" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 40, height: 10, backgroundColor: '#1E293B', borderRadius: 5 }} />
+          <View style={{ width: 10, height: 10, backgroundColor: '#1E293B', opacity: 0.2, borderRadius: 5 }} />
+          <View style={{ width: 10, height: 10, backgroundColor: '#1E293B', opacity: 0.2, borderRadius: 5 }} />
         </View>
 
         {/* Next Button */}
         <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
           <Text 
-            className="text-rose-500 text-xl font-bold"
-            style={{ fontFamily: 'Montserrat_700Bold' }}
+            style={{ color: '#F43F5E', fontSize: 20, fontWeight: '700' }}
           >
             Next
           </Text>

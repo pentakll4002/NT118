@@ -66,3 +66,5 @@ docker-data/
 ############################
 *.swp
 *.tmp
+
+.windsurf/

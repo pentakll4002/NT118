@@ -1,5 +1,5 @@
-// import OnboardingScreen from '../components/screen/OnboardingScreen';
+import OnboardingScreen from '../components/screen/OnboardingScreen';
 
-// export default function Onboarding() {
-//   return <OnboardingScreen />;
-// }
+export default function Onboarding() {
+  return <OnboardingScreen />;
+}
