@@ -18,8 +18,8 @@ const SpashFollowScreen = () => {
   };
 
   const handleGetStarted = () => {
-    // On the last screen, Next/Get Started goes to the main app (tabs)
-    router.replace('/(tabs)');
+    // Chuyển sang màn hình GetStarted mới tạo
+    router.replace('/get-started' as any);
   };
 
   return (
