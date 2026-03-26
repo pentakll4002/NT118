@@ -9,8 +9,8 @@ const GetStartedScreen = () => {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    // Chuyển sang màn hình Login
-    router.replace('/login' as any);
+    // Chuyển sang màn hình chính của app (tabs) nơi chứa HomePage
+    router.replace('/(tabs)');
   };
 
   return (
