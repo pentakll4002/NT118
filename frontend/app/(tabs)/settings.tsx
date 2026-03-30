@@ -1,5 +1,5 @@
-import HomePage from '@/components/screen/HomePage';
+import ProfilePage from '@/components/screen/ProfilePage';
 
 export default function SettingsScreen() {
-  return <HomePage />;
+  return <ProfilePage />;
 }
