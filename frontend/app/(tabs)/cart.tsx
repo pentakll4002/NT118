@@ -1,6 +1,5 @@
-import HomePage from '@/components/screen/HomePage';
-import ShopPage from '@/components/screen/ShopPage';
+import CartScreenComponent from '@/components/screen/CartScreen';
 
-export default function CartScreen() {
-  return <ShopPage />;
+export default function CartScreenRoute() {
+  return <CartScreenComponent />;
 }

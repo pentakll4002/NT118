@@ -12,6 +12,10 @@ const SplashPayScreen = () => {
     router.replace('/(tabs)');
   };
 
+  const handleGoToCart = () => {
+    router.push('/cart' as any);
+  };
+
   const handleNext = () => {
     router.push('/splash-follow');
   };
@@ -116,6 +120,20 @@ const SplashPayScreen = () => {
           >
             Thanh toán nhanh chóng và an toàn với nhiều phương thức: thẻ ngân hàng, hoặc thanh toán khi nhận hàng.
           </Text>
+
+          <TouchableOpacity 
+            onPress={handleGoToCart}
+            style={{ 
+              marginTop: 20, 
+              paddingVertical: 12, 
+              paddingHorizontal: 24, 
+              backgroundColor: '#FF4747', 
+              borderRadius: 8,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat_700Bold' }}>Đi đến Giỏ hàng</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
