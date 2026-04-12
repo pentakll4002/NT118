@@ -66,11 +66,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="notification"
         options={{
-          title: 'Tìm Kiếm',
+          title: 'Thông báo',
           tabBarIcon: ({ color, focused }) => (
-            <Feather name="search" size={24} color={focused ? '#FF4747' : color} />
+            <Feather name="bell" size={24} color={focused ? '#FF4747' : color} />
           ),
         }}
       />
@@ -83,6 +83,10 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* Hide leftover unused screens from the Tab bar */}
+      <Tabs.Screen name="search" options={{ href: null }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }

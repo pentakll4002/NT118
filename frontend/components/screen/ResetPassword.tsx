@@ -93,7 +93,8 @@ const ResetPassword = () => {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            Đặt lại{'\n'}Mật khẩu
+            {'\n'}Đặt lại
+            {'\n'}Mật khẩu
           </Text>
 
           <Text style={styles.subText}>
