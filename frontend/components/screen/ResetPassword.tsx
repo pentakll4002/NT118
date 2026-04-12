@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,30 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { forgotPasswordRequest, resetPasswordRequest } from '@/lib/authApi';
 
 const ResetPassword = () => {
   const router = useRouter();
-  const { email } = useLocalSearchParams<{ email?: string }>();
+  const { email, presetCode } = useLocalSearchParams<{ email?: string; presetCode?: string }>();
 
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleResetPassword = () => {
+  useEffect(() => {
+    if (typeof presetCode === 'string' && presetCode.length > 0) {
+      setCode(presetCode);
+    }
+  }, [presetCode]);
+
+  const handleResetPassword = async () => {
     if (!code.trim()) {
       Alert.alert('Thông báo', 'Vui lòng nhập mã xác thực');
       return;
@@ -42,21 +51,41 @@ const ResetPassword = () => {
       return;
     }
 
-    // TODO:
-    // gọi API reset password với:
-    // { email, code, newPassword: password }
+    const emailStr = typeof email === 'string' ? email : Array.isArray(email) ? email[0] : '';
+    if (!emailStr?.trim()) {
+      Alert.alert('Thông báo', 'Thiếu email. Quay lại bước quên mật khẩu.');
+      return;
+    }
 
-    Alert.alert('Thành công', 'Đổi mật khẩu thành công', [
-      {
-        text: 'OK',
-        onPress: () => router.replace('/login'),
-      },
-    ]);
+    setSubmitting(true);
+    try {
+      await resetPasswordRequest(emailStr, code, password);
+      Alert.alert('Thành công', 'Đổi mật khẩu thành công', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/login'),
+        },
+      ]);
+    } catch (e) {
+      Alert.alert('Lỗi', e instanceof Error ? e.message : 'Không đặt lại được mật khẩu');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleResendCode = () => {
-    // TODO: gọi API gửi lại mã OTP về email
-    Alert.alert('Thông báo', 'Mã xác thực đã được gửi lại email');
+  const handleResendCode = async () => {
+    const emailStr = typeof email === 'string' ? email : Array.isArray(email) ? email[0] : '';
+    if (!emailStr?.trim()) {
+      Alert.alert('Thông báo', 'Thiếu email');
+      return;
+    }
+    try {
+      const res = await forgotPasswordRequest(emailStr);
+      if (res.resetCode) setCode(res.resetCode);
+      Alert.alert('Thông báo', 'Đã tạo mã mới (kiểm tra email hoặc mã dev).');
+    } catch (e) {
+      Alert.alert('Lỗi', e instanceof Error ? e.message : 'Không gửi lại được mã');
+    }
   };
 
   return (
@@ -148,8 +177,16 @@ const ResetPassword = () => {
           <Text style={styles.resendText}>Gửi lại mã</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-          <Text style={styles.buttonText}>Xác nhận</Text>
+        <TouchableOpacity
+          style={[styles.button, submitting && styles.buttonDisabled]}
+          onPress={handleResetPassword}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Xác nhận</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -223,6 +260,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 30,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: 'white',
