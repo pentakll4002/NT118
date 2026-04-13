@@ -7,24 +7,38 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { forgotPasswordRequest } from '@/lib/authApi';
 
 const ForgotPasswordScreen = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!email.trim()) {
       Alert.alert('Thông báo', 'Vui lòng nhập email');
       return;
     }
 
-    router.push({
-      pathname: '/resetPassword',
-      params: { email },
-    } as any);
+    setSubmitting(true);
+    try {
+      const res = await forgotPasswordRequest(email);
+      const params: Record<string, string> = { email: email.trim() };
+      if (res.resetCode) params.presetCode = res.resetCode;
+
+      router.push({
+        pathname: '/resetPassword',
+        params,
+      } as any);
+    } catch (e) {
+      Alert.alert('Lỗi', e instanceof Error ? e.message : 'Không gửi được yêu cầu');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -62,8 +76,16 @@ const ForgotPasswordScreen = () => {
         </Text>
 
         {/* Button */}
-        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-          <Text style={styles.sendButtonText}>Gửi</Text>
+        <TouchableOpacity
+          style={[styles.sendButton, submitting && styles.sendButtonDisabled]}
+          onPress={handleSend}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.sendButtonText}>Gửi</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -126,6 +148,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.7,
   },
   sendButtonText: {
     color: '#FFF',

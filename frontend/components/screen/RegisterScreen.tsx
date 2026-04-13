@@ -7,9 +7,12 @@ import {
   StyleSheet, 
   SafeAreaView, 
   Dimensions,
-  ScrollView
+  ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { registerRequest } from '@/lib/authApi';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -22,10 +25,34 @@ const RegisterScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleRegister = () => {
-    // Navigate to main app or verification after register
-    router.replace('/(tabs)');
+  const handleRegister = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert('Thông báo', 'Vui lòng nhập email và mật khẩu');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Thông báo', 'Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp');
+      return;
+    }
+    if (!agreeToTerms) {
+      Alert.alert('Thông báo', 'Vui lòng đồng ý điều khoản dịch vụ');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await registerRequest(email, password);
+      router.replace('/(tabs)');
+    } catch (e) {
+      Alert.alert('Đăng ký thất bại', e instanceof Error ? e.message : 'Lỗi không xác định');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleLogin = () => {
@@ -115,8 +142,16 @@ const RegisterScreen = () => {
           </View>
 
           {/* Register Button */}
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Đăng ký</Text>
+          <TouchableOpacity
+            style={[styles.registerButton, submitting && styles.registerButtonDisabled]}
+            onPress={handleRegister}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.registerButtonText}>Đăng ký</Text>
+            )}
           </TouchableOpacity>
 
           {/* Social Login Section */}
@@ -223,6 +258,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 35,
+  },
+  registerButtonDisabled: {
+    opacity: 0.7,
   },
   registerButtonText: {
     color: 'white',

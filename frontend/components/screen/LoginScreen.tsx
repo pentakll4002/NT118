@@ -7,8 +7,11 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { loginRequest } from '@/lib/authApi';
 import {
   FontAwesome,
   Ionicons,
@@ -22,10 +25,22 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {
-    // Navigate to main app (tabs) after login
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert('Thông báo', 'Vui lòng nhập email và mật khẩu');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await loginRequest(email, password);
+      router.replace('/(tabs)');
+    } catch (e) {
+      Alert.alert('Đăng nhập thất bại', e instanceof Error ? e.message : 'Lỗi không xác định');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleRegister = () => {
@@ -97,8 +112,16 @@ const LoginScreen = () => {
         </View>
 
         {/* Login Button */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Đăng nhập</Text>
+        <TouchableOpacity
+          style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
+          onPress={handleLogin}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          )}
         </TouchableOpacity>
 
         {/* Social Login Section */}
@@ -188,6 +211,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 40,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: 'white',
