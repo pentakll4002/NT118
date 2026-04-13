@@ -12,10 +12,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { forgotPasswordRequest } from '@/lib/authApi';
+import CaptchaVerification from '@/components/common/CaptchaVerification';
 
 const ForgotPasswordScreen = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSend = async () => {
@@ -23,16 +25,18 @@ const ForgotPasswordScreen = () => {
       Alert.alert('Thông báo', 'Vui lòng nhập email');
       return;
     }
+    if (!isCaptchaValid) {
+      Alert.alert('Thông báo', 'Vui lòng xác thực captcha trước khi gửi');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const res = await forgotPasswordRequest(email);
-      const params: Record<string, string> = { email: email.trim() };
-      if (res.resetCode) params.presetCode = res.resetCode;
+      await forgotPasswordRequest(email);
 
       router.push({
         pathname: '/resetPassword',
-        params,
+        params: { email: email.trim() },
       } as any);
     } catch (e) {
       Alert.alert('Lỗi', e instanceof Error ? e.message : 'Không gửi được yêu cầu');
@@ -75,11 +79,13 @@ const ForgotPasswordScreen = () => {
           * Mã đặt lại mật khẩu sẽ được gửi đến email của bạn
         </Text>
 
+        <CaptchaVerification onValidChange={setIsCaptchaValid} />
+
         {/* Button */}
         <TouchableOpacity
           style={[styles.sendButton, submitting && styles.sendButtonDisabled]}
           onPress={handleSend}
-          disabled={submitting}
+          disabled={submitting || !isCaptchaValid}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" />

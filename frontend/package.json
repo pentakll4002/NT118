@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "concurrently -n \"expo,backend\" -c \"blue,green\" \"expo start\" \"npm run dev:backend\"",
+    "start": "concurrently --raw -n \"expo,backend\" -c \"blue,green\" \"expo start --clear --lan\" \"npm run dev:backend\"",
     "start:clear": "expo start --clear",
     "start:lan": "expo start --clear --lan",
     "reset-project": "node ./scripts/reset-project.js",

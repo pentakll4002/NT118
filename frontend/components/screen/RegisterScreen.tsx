@@ -12,8 +12,9 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { registerRequest } from '@/lib/authApi';
+import { registerRequest, sendRegisterCaptchaRequest } from '@/lib/authApi';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import CaptchaVerification from '@/components/common/CaptchaVerification';
 
 const { width } = Dimensions.get('window');
 
@@ -25,28 +26,56 @@ const RegisterScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showCaptchaStep, setShowCaptchaStep] = useState(false);
+  const [emailCaptchaCode, setEmailCaptchaCode] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleRegister = async () => {
+  const validateRegisterFields = () => {
     if (!email.trim() || !password) {
       Alert.alert('Thông báo', 'Vui lòng nhập email và mật khẩu');
-      return;
+      return false;
     }
     if (password.length < 6) {
       Alert.alert('Thông báo', 'Mật khẩu phải có ít nhất 6 ký tự');
-      return;
+      return false;
     }
     if (password !== confirmPassword) {
       Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp');
-      return;
+      return false;
     }
     if (!agreeToTerms) {
       Alert.alert('Thông báo', 'Vui lòng đồng ý điều khoản dịch vụ');
+      return false;
+    }
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateRegisterFields()) return;
+    if (!showCaptchaStep) {
+      setSubmitting(true);
+      try {
+        await sendRegisterCaptchaRequest(email);
+        setShowCaptchaStep(true);
+        setEmailCaptchaCode('');
+        setIsCaptchaValid(false);
+        Alert.alert('Xác thực', 'Mã captcha đã được gửi qua Gmail. Vui lòng nhập mã để hoàn tất đăng ký.');
+      } catch (e) {
+        Alert.alert('Không gửi được mã', e instanceof Error ? e.message : 'Lỗi không xác định');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+    if (!isCaptchaValid) {
+      Alert.alert('Thông báo', 'Vui lòng nhập đúng captcha');
       return;
     }
     setSubmitting(true);
     try {
-      await registerRequest(email, password);
+      await registerRequest(email, password, emailCaptchaCode);
+      Alert.alert('Thành công', 'Đăng ký thành công');
       router.replace('/(tabs)');
     } catch (e) {
       Alert.alert('Đăng ký thất bại', e instanceof Error ? e.message : 'Lỗi không xác định');
@@ -141,16 +170,47 @@ const RegisterScreen = () => {
             </View>
           </View>
 
+          {showCaptchaStep ? (
+            <View style={styles.captchaSection}>
+              <CaptchaVerification
+                mode="email"
+                onValidChange={setIsCaptchaValid}
+                emailCodeValue={emailCaptchaCode}
+                onEmailCodeChange={setEmailCaptchaCode}
+                onRequestEmailCode={async () => {
+                  try {
+                    await sendRegisterCaptchaRequest(email);
+                    Alert.alert('Thông báo', 'Đã gửi lại mã captcha qua Gmail');
+                  } catch (e) {
+                    Alert.alert('Không gửi được mã', e instanceof Error ? e.message : 'Lỗi không xác định');
+                  }
+                }}
+              />
+              <TouchableOpacity
+                style={styles.backStepContainer}
+                onPress={() => {
+                  setShowCaptchaStep(false);
+                  setIsCaptchaValid(false);
+                  setEmailCaptchaCode('');
+                }}
+              >
+                <Text style={styles.backStepText}>Quay lại chỉnh thông tin</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Register Button */}
           <TouchableOpacity
             style={[styles.registerButton, submitting && styles.registerButtonDisabled]}
             onPress={handleRegister}
-            disabled={submitting}
+            disabled={submitting || (showCaptchaStep && !isCaptchaValid)}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.registerButtonText}>Đăng ký</Text>
+              <Text style={styles.registerButtonText}>
+                {showCaptchaStep ? 'Xác nhận captcha và đăng ký' : 'Đăng ký'}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -250,6 +310,18 @@ const styles = StyleSheet.create({
   termsLink: {
     color: '#F83758',
     fontWeight: '600',
+  },
+  captchaSection: {
+    marginTop: 16,
+  },
+  backStepContainer: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
+  },
+  backStepText: {
+    color: '#F83758',
+    fontSize: 12,
+    fontFamily: 'Montserrat_600SemiBold',
   },
   registerButton: {
     backgroundColor: '#F83758',

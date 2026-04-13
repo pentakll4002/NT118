@@ -35,11 +35,23 @@ export async function loginRequest(email: string, password: string): Promise<Aut
   }
 }
 
-export async function registerRequest(email: string, password: string): Promise<AuthResponse> {
+export async function sendRegisterCaptchaRequest(email: string): Promise<MessageResponse> {
+  try {
+    const { data } = await apiClient.post<MessageResponse>('/api/auth/send-register-captcha', {
+      email: email.trim(),
+    });
+    return data;
+  } catch (e) {
+    throw new Error(extractMessage(e));
+  }
+}
+
+export async function registerRequest(email: string, password: string, captchaCode: string): Promise<AuthResponse> {
   try {
     const { data } = await apiClient.post<AuthResponse>('/api/auth/register', {
       email: email.trim(),
       password,
+      captchaCode: captchaCode.trim(),
     });
     await saveAuthToken(data.token);
     return data;

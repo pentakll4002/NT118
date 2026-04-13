@@ -1,6 +1,6 @@
 namespace Backend.Contracts;
 
-public record RegisterRequest(string Email, string Password);
+public record RegisterRequest(string Email, string Password, string CaptchaCode);
 
 public record LoginRequest(string Email, string Password);
 
@@ -13,3 +13,5 @@ public record AuthResponse(string Token, long UserId, string Email);
 public record ForgotPasswordResponse(string Message, string? ResetCode);
 
 public record MessageResponse(string Message);
+
+public record SendRegisterCaptchaRequest(string Email);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,27 +12,27 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { forgotPasswordRequest, resetPasswordRequest } from '@/lib/authApi';
+import CaptchaVerification from '@/components/common/CaptchaVerification';
 
 const ResetPassword = () => {
   const router = useRouter();
-  const { email, presetCode } = useLocalSearchParams<{ email?: string; presetCode?: string }>();
+  const { email } = useLocalSearchParams<{ email?: string }>();
 
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (typeof presetCode === 'string' && presetCode.length > 0) {
-      setCode(presetCode);
-    }
-  }, [presetCode]);
 
   const handleResetPassword = async () => {
     if (!code.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập mã xác thực');
+      Alert.alert('Thông báo', 'Vui lòng nhập mã xác thực từ email');
+      return;
+    }
+    if (!isCaptchaValid) {
+      Alert.alert('Thông báo', 'Vui lòng nhập đúng mã xác thực email');
       return;
     }
 
@@ -80,9 +80,10 @@ const ResetPassword = () => {
       return;
     }
     try {
-      const res = await forgotPasswordRequest(emailStr);
-      if (res.resetCode) setCode(res.resetCode);
-      Alert.alert('Thông báo', 'Đã tạo mã mới (kiểm tra email hoặc mã dev).');
+      await forgotPasswordRequest(emailStr);
+      setCode('');
+      setIsCaptchaValid(false);
+      Alert.alert('Thông báo', 'Đã gửi lại mã mới qua email.');
     } catch (e) {
       Alert.alert('Lỗi', e instanceof Error ? e.message : 'Không gửi lại được mã');
     }
@@ -105,22 +106,13 @@ const ResetPassword = () => {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Ionicons
-              name="key-outline"
-              size={22}
-              color="#676767"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập mã xác thực"
-              placeholderTextColor="#676767"
-              value={code}
-              onChangeText={setCode}
-              keyboardType="number-pad"
-            />
-          </View>
+          <CaptchaVerification
+            mode="email"
+            onValidChange={setIsCaptchaValid}
+            emailCodeValue={code}
+            onEmailCodeChange={setCode}
+            onRequestEmailCode={handleResendCode}
+          />
 
           <View style={styles.inputContainer}>
             <Ionicons
@@ -173,15 +165,9 @@ const ResetPassword = () => {
         </View>
 
         <TouchableOpacity
-          style={styles.resendContainer}
-          onPress={handleResendCode}>
-          <Text style={styles.resendText}>Gửi lại mã</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[styles.button, submitting && styles.buttonDisabled]}
           onPress={handleResetPassword}
-          disabled={submitting}
+          disabled={submitting || !isCaptchaValid}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" />
@@ -244,15 +230,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000',
     fontFamily: 'Montserrat_500Medium',
-  },
-  resendContainer: {
-    marginTop: 18,
-    alignSelf: 'flex-end',
-  },
-  resendText: {
-    color: '#F83758',
-    fontSize: 13,
-    fontFamily: 'Montserrat_600SemiBold',
   },
   button: {
     backgroundColor: '#F83758',

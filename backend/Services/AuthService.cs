@@ -7,6 +7,7 @@ using Backend.Models;
 using Backend.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -15,23 +16,53 @@ namespace Backend.Services;
 public class AuthService(
     AppDbContext db,
     IOptions<JwtOptions> jwtOptions,
-    IOptions<AppFeatureOptions> featureOptions) : IAuthService
+    IMemoryCache cache,
+    IEmailService emailService) : IAuthService
 {
     private readonly JwtOptions _jwt = jwtOptions.Value;
-    private readonly AppFeatureOptions _features = featureOptions.Value;
     private readonly PasswordHasher<User> _passwordHasher = new();
+    private const string RegisterCaptchaPrefix = "register-captcha:";
+
+    public async Task<MessageResponse> SendRegisterCaptchaAsync(SendRegisterCaptchaRequest request, CancellationToken cancellationToken = default)
+    {
+        var email = NormalizeEmail(request.Email);
+        if (string.IsNullOrWhiteSpace(email))
+            throw new InvalidOperationException("Email là bắt buộc.");
+
+        if (await db.Users.AnyAsync(u => u.Email == email, cancellationToken))
+            throw new InvalidOperationException("Email đã được đăng ký.");
+
+        var code = Random.Shared.Next(100000, 1_000_000).ToString();
+        cache.Set(
+            $"{RegisterCaptchaPrefix}{email}",
+            code,
+            TimeSpan.FromMinutes(10));
+
+        var subject = "Ma xac thuc dang ky NT118";
+        var body = $"Ma captcha cua ban la: {code}. Ma co hieu luc trong 10 phut.";
+        await emailService.SendAsync(email, subject, body, cancellationToken);
+
+        return new MessageResponse("Đã gửi mã captcha qua email.");
+    }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         var email = NormalizeEmail(request.Email);
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(request.Password))
-            throw new InvalidOperationException("Email và mật khẩu là bắt buộc.");
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.CaptchaCode))
+            throw new InvalidOperationException("Email, mật khẩu và mã captcha là bắt buộc.");
 
         if (request.Password.Length < 6)
             throw new InvalidOperationException("Mật khẩu phải có ít nhất 6 ký tự.");
 
         if (await db.Users.AnyAsync(u => u.Email == email, cancellationToken))
             throw new InvalidOperationException("Email đã được đăng ký.");
+
+        if (!cache.TryGetValue<string>($"{RegisterCaptchaPrefix}{email}", out var storedCode)
+            || string.IsNullOrWhiteSpace(storedCode)
+            || storedCode != request.CaptchaCode.Trim())
+            throw new InvalidOperationException("Mã captcha không hợp lệ hoặc đã hết hạn.");
+
+        cache.Remove($"{RegisterCaptchaPrefix}{email}");
 
         var username = await GenerateUniqueUsernameAsync(email, cancellationToken);
         var now = DateTime.UtcNow;
@@ -80,10 +111,13 @@ public class AuthService(
         user.PasswordResetCodeExpires = DateTime.UtcNow.AddMinutes(15);
         await db.SaveChangesAsync(cancellationToken);
 
-        var expose = _features.ExposePasswordResetCodes;
+        var subject = "Ma dat lai mat khau NT118";
+        var body = $"Ma xac thuc dat lai mat khau cua ban la: {code}. Ma co hieu luc trong 15 phut.";
+        await emailService.SendAsync(email, subject, body, cancellationToken);
+
         return new ForgotPasswordResponse(
-            "Mã đặt lại mật khẩu đã được tạo. Kiểm tra email (hoặc mã hiển thị trong chế độ phát triển).",
-            expose ? code : null);
+            "Mã đặt lại mật khẩu đã được gửi qua email.",
+            null);
     }
 
     public async Task<MessageResponse> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
