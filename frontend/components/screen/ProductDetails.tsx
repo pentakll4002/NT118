@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaVi
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import ProductCard, { Product } from '../common/ProductCard';
 import { getProductById, getProducts, ProductDTO, formatPriceFull, formatSold } from '../../lib/productApi';
+import { toggleFavorite, getFavoriteStatus } from '../../lib/wishlistApi';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +17,9 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     loadProduct();
@@ -25,6 +30,12 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
       setLoading(true);
       const data = await getProductById(productId);
       setProduct(data);
+
+      // Load favorite status
+      try {
+        const favStatus = await getFavoriteStatus(productId);
+        setIsFavorited(favStatus);
+      } catch { /* user not logged in */ }
 
       // Load related products from same category
       const related = await getProducts({ category: data.categoryId, pageSize: 4 });
@@ -77,7 +88,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#F83758" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
@@ -85,7 +96,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
           <TouchableOpacity style={styles.iconButton}>
             <Ionicons name="share-social-outline" size={24} color="#F83758" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(tabs)/cart')}>
             <Ionicons name="cart-outline" size={24} color="#F83758" />
             <View style={styles.badge}>
               <Text style={styles.badgeText}>3</Text>
@@ -160,8 +171,22 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
               <Text style={styles.ratingNumber}>{product.rating.toFixed(1)}</Text>
               <Text style={styles.soldText}>{formatSold(product.soldQuantity)}</Text>
             </View>
-            <TouchableOpacity>
-              <Ionicons name="heart-outline" size={24} color="#555" />
+            <TouchableOpacity
+              onPress={async () => {
+                if (favLoading) return;
+                setFavLoading(true);
+                try {
+                  const result = await toggleFavorite(productId);
+                  setIsFavorited(result.isFavorited);
+                } catch (err) { console.log('Favorite toggle failed:', err); }
+                finally { setFavLoading(false); }
+              }}
+            >
+              <Ionicons
+                name={isFavorited ? 'heart' : 'heart-outline'}
+                size={24}
+                color={isFavorited ? '#F83758' : '#555'}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -282,7 +307,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
             
             <View style={styles.productsGrid}>
               {relatedProducts.map((prod) => (
-                <ProductCard key={prod.id} product={prod as any} />
+                <ProductCard 
+                  key={prod.id} 
+                  product={prod as any} 
+                  onPress={(p) => router.push(`/product/${p.id}` as any)}
+                />
               ))}
             </View>
           </View>
@@ -294,14 +323,14 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
 
       {/* Bottom Floating Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.bottomBarIconAction}>
+        <TouchableOpacity style={styles.bottomBarIconAction} onPress={() => router.push('/chat')}>
           <Ionicons name="chatbubble-ellipses-outline" size={22} color="#555" />
           <Text style={styles.bottomBarIconText}>Chat ngay</Text>
         </TouchableOpacity>
         
         <View style={styles.bottomBarVertDivider} />
         
-        <TouchableOpacity style={styles.bottomBarIconAction}>
+        <TouchableOpacity style={styles.bottomBarIconAction} onPress={() => router.push('/(tabs)/cart')}>
           <Ionicons name="cart-outline" size={22} color="#555" />
           <View style={styles.plusIconBadge}>
              <Text style={styles.plusIconText}>+</Text>
@@ -309,7 +338,10 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
           <Text style={styles.bottomBarIconText}>Thêm giỏ</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.buyNowButton}>
+        <TouchableOpacity 
+          style={styles.buyNowButton}
+          onPress={() => router.push({ pathname: '/placeorder', params: { productId } })}
+        >
           <Text style={styles.buyNowText}>MUA NGAY</Text>
         </TouchableOpacity>
       </View>

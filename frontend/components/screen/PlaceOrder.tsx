@@ -1,23 +1,81 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView, Platform, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { getProductById, ProductDTO, formatPriceFull } from '../../lib/productApi';
+import { toggleFavorite, getFavoriteStatus } from '../../lib/wishlistApi';
+import { useRouter } from 'expo-router';
 
-const PlaceOrder: React.FC = () => {
+interface PlaceOrderProps {
+  productId?: number;
+  quantity?: number;
+}
+
+const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) => {
+  const [product, setProduct] = useState<ProductDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [qty, setQty] = useState(quantity);
+  const router = useRouter();
+
+  useEffect(() => {
+    loadProduct();
+  }, [productId]);
+
+  const loadProduct = async () => {
+    try {
+      setLoading(true);
+      const data = await getProductById(productId);
+      setProduct(data);
+      try {
+        const favStatus = await getFavoriteStatus(productId);
+        setIsFavorited(favStatus);
+      } catch { /* not logged in */ }
+    } catch (err) {
+      console.log('Failed to load product:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      const result = await toggleFavorite(productId);
+      setIsFavorited(result.isFavorited);
+    } catch (err) {
+      console.log('Toggle fav failed:', err);
+    }
+  };
+
+  const orderAmount = product ? product.price * qty : 0;
+  const deliveryFee = 0;
+  const totalAmount = orderAmount + deliveryFee;
+
+  // Delivery estimate: ~5 days from now
+  const deliveryDate = new Date();
+  deliveryDate.setDate(deliveryDate.getDate() + 5);
+  const deliveryStr = deliveryDate.toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#F83758" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Đang tải...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Image 
-            source={require('../../assets/images/place-order/icon/Vector 3.svg')} 
-            style={styles.backIcon} 
-            resizeMode="contain" 
-          />
+        <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thanh Toán</Text>
-        <TouchableOpacity style={styles.iconButton}>
-          <Image 
-            source={require('../../assets/images/place-order/icon/favorite.svg')} 
-            style={styles.heartIcon} 
-            resizeMode="contain" 
+        <TouchableOpacity style={styles.iconButton} onPress={handleToggleFavorite}>
+          <Ionicons
+            name={isFavorited ? 'heart' : 'heart-outline'}
+            size={22}
+            color={isFavorited ? '#F83758' : '#000'}
           />
         </TouchableOpacity>
       </View>
@@ -26,29 +84,31 @@ const PlaceOrder: React.FC = () => {
         {/* Product Component */}
         <View style={styles.productContainer}>
           <View style={styles.productImageWrapper}>
-            {/* Placeholder for product image */}
-            <View style={styles.productImagePlaceholder} />
+            {product?.image ? (
+              <Image source={{ uri: product.image }} style={styles.productImageFull} resizeMode="cover" />
+            ) : (
+              <View style={styles.productImagePlaceholder} />
+            )}
           </View>
           
           <View style={styles.productInfo}>
-            <Text style={styles.productTitle}>Women's Casual Wear</Text>
-            <Text style={styles.productSubtitle}>Checked Single-Breasted Blazer</Text>
+            <Text style={styles.productTitle} numberOfLines={2}>
+              {product?.name || 'Sản phẩm'}
+            </Text>
+            <Text style={styles.productSubtitle} numberOfLines={1}>
+              {product?.brand || product?.description?.slice(0, 40) || ''}
+            </Text>
             
             <View style={styles.dropdownsRow}>
               <TouchableOpacity style={styles.dropdownButton}>
-                <Text style={styles.dropdownText}>Size <Text style={styles.dropdownBold}>42</Text></Text>
-                <Image source={require('../../assets/images/place-order/icon/keyboard_arrow_down.svg')} style={styles.dropdownIcon} resizeMode="contain" />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.dropdownButton}>
-                <Text style={styles.dropdownText}>Qty <Text style={styles.dropdownBold}>1</Text></Text>
-                <Image source={require('../../assets/images/place-order/icon/keyboard_arrow_down.svg')} style={styles.dropdownIcon} resizeMode="contain" />
+                <Text style={styles.dropdownText}>Qty <Text style={styles.dropdownBold}>{qty}</Text></Text>
+                <Ionicons name="chevron-down" size={12} color="#333" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.deliveryRow}>
-              <Text style={styles.deliveryLabel}>Delivery by </Text>
-              <Text style={styles.deliveryValue}>10 May 2XXX</Text>
+              <Text style={styles.deliveryLabel}>Giao hàng dự kiến </Text>
+              <Text style={styles.deliveryValue}>{deliveryStr}</Text>
             </View>
           </View>
         </View>
@@ -58,8 +118,8 @@ const PlaceOrder: React.FC = () => {
         {/* Coupon Section */}
         <View style={styles.couponContainer}>
           <View style={styles.couponLeft}>
-            <Image source={require('../../assets/images/place-order/icon/🦆 icon _coupon_.svg')} style={styles.couponIcon} resizeMode="contain" />
-            <Text style={styles.couponText}>Mã giảm giá</Text>
+            <Ionicons name="pricetag-outline" size={22} color="#F83758" />
+            <Text style={styles.couponText}>  Mã giảm giá</Text>
           </View>
           <TouchableOpacity>
             <Text style={styles.selectText}>Chọn</Text>
@@ -74,25 +134,13 @@ const PlaceOrder: React.FC = () => {
         {/* Order Details Values */}
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Order Amounts</Text>
-            <Text style={styles.detailValue}>₹ 7,000.00</Text>
+            <Text style={styles.detailLabel}>Tạm tính</Text>
+            <Text style={styles.detailValue}>{formatPriceFull(orderAmount)}</Text>
           </View>
 
           <View style={styles.detailRow}>
-            <View style={styles.convenienceLeft}>
-              <Text style={styles.detailLabel}>Convenience</Text>
-              <TouchableOpacity>
-                <Text style={styles.actionTextSmall}>Know More</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity>
-              <Text style={styles.actionText}>Apply Coupon</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Delivery Fee</Text>
-            <Text style={styles.actionText}>Free</Text>
+            <Text style={styles.detailLabel}>Phí vận chuyển</Text>
+            <Text style={styles.actionText}>{deliveryFee === 0 ? 'Miễn phí' : formatPriceFull(deliveryFee)}</Text>
           </View>
         </View>
 
@@ -102,13 +150,7 @@ const PlaceOrder: React.FC = () => {
         <View style={styles.totalSection}>
           <View style={styles.detailRow}>
             <Text style={styles.totalTitle}>Tổng đơn hàng</Text>
-            <Text style={styles.totalValue}>₹ 7,000.00</Text>
-          </View>
-          <View style={styles.emiRow}>
-            <Text style={styles.detailLabel}>EMI Available</Text>
-            <TouchableOpacity>
-              <Text style={styles.actionTextSmall}>Details</Text>
-            </TouchableOpacity>
+            <Text style={styles.totalValue}>{formatPriceFull(totalAmount)}</Text>
           </View>
         </View>
         
@@ -119,9 +161,9 @@ const PlaceOrder: React.FC = () => {
       {/* Bottom Floating Bar */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarLeft}>
-          <Text style={styles.bottomTotalValue}>₹ 7,000.00</Text>
+          <Text style={styles.bottomTotalValue}>{formatPriceFull(totalAmount)}</Text>
           <TouchableOpacity>
-            <Text style={styles.viewDetailsText}>View Details</Text>
+            <Text style={styles.viewDetailsText}>Xem chi tiết</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.checkoutButton}>
@@ -146,18 +188,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backIcon: {
-    width: 10,
-    height: 18,
-  },
-  heartIcon: {
-    width: 22,
-    height: 18,
   },
   headerTitle: {
     fontSize: 18,
@@ -166,7 +200,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 100, // padding for bottom bar
+    paddingBottom: 100,
   },
   productContainer: {
     flexDirection: 'row',
@@ -179,6 +213,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     marginRight: 16,
+  },
+  productImageFull: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   productImagePlaceholder: {
     flex: 1,
@@ -212,20 +251,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 4,
+    gap: 4,
   },
   dropdownText: {
     fontSize: 12,
     color: '#333333',
-    marginRight: 4,
   },
   dropdownBold: {
     fontWeight: '600',
     color: '#000000',
-  },
-  dropdownIcon: {
-    width: 10,
-    height: 5,
-    marginLeft: 4,
   },
   deliveryRow: {
     flexDirection: 'row',
@@ -252,11 +286,6 @@ const styles = StyleSheet.create({
   couponLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  couponIcon: {
-    width: 28,
-    height: 28,
-    marginRight: 12,
   },
   couponText: {
     fontSize: 16,
@@ -290,24 +319,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  convenienceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionTextSmall: {
-    fontSize: 12,
-    color: '#F83758',
-    fontWeight: '500',
-  },
   actionText: {
     fontSize: 14,
     color: '#F83758',
     fontWeight: '500',
   },
-  totalSection: {
-    
-  },
+  totalSection: {},
   totalTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -317,12 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#000000',
-  },
-  emiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
   },
   bottomBar: {
     position: 'absolute',
@@ -335,14 +346,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // safe area padding
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 10,
