@@ -15,5 +15,8 @@ public class Favorite
     public long ProductId { get; set; }
 
     [Column("created_at")]
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation
+    public Product Product { get; set; } = null!;
 }

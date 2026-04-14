@@ -1,4 +1,5 @@
 using Backend.Configuration;
+using System.Text;
 using Backend.Data;
 using Backend.Filters;
 using Backend.Hubs;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnvLoader.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
@@ -100,6 +100,25 @@ builder.Services.AddScoped<INotificationRealtimeService, NotificationRealtimeSer
 builder.Services.AddScoped<ApiExceptionFilter>();
 builder.Services.AddScoped<ApiResponseWrapperFilter>();
 builder.Services.AddSignalR();
+
+// JWT Authentication
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidAudience = jwtSection["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        };
+    });
+builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
 {
@@ -209,6 +228,36 @@ using (var scope = app.Services.CreateScope())
 
     // Create database if not exists
     db.Database.EnsureCreated();
+
+    // Create wishlist tables if they don't exist
+    db.Database.ExecuteSqlRaw(@"
+        CREATE TABLE IF NOT EXISTS favorites (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, product_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS wishlist_collections (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_wishlist_collections_user ON wishlist_collections(user_id);
+
+        CREATE TABLE IF NOT EXISTS wishlist_collection_items (
+            id BIGSERIAL PRIMARY KEY,
+            collection_id BIGINT NOT NULL REFERENCES wishlist_collections(id) ON DELETE CASCADE,
+            product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(collection_id, product_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_wishlist_collection_items_collection ON wishlist_collection_items(collection_id);
+    ");
 }
 
 app.UseCors();

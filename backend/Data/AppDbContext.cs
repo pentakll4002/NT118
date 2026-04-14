@@ -27,6 +27,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
+    public DbSet<WishlistCollection> WishlistCollections => Set<WishlistCollection>();
+    public DbSet<WishlistCollectionItem> WishlistCollectionItems => Set<WishlistCollectionItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -400,6 +402,42 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.SortOrder).HasColumnName("sort_order");
             e.Property(x => x.IsMain).HasColumnName("is_main");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<Favorite>(e =>
+        {
+            e.ToTable("favorites");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id");
+            e.Property(x => x.ProductId).HasColumnName("product_id");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId);
+            e.HasIndex(x => new { x.UserId, x.ProductId }).IsUnique();
+        });
+
+        modelBuilder.Entity<WishlistCollection>(e =>
+        {
+            e.ToTable("wishlist_collections");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id");
+            e.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            e.HasMany(x => x.Items).WithOne(x => x.Collection).HasForeignKey(x => x.CollectionId);
+        });
+
+        modelBuilder.Entity<WishlistCollectionItem>(e =>
+        {
+            e.ToTable("wishlist_collection_items");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.CollectionId).HasColumnName("collection_id");
+            e.Property(x => x.ProductId).HasColumnName("product_id");
+            e.Property(x => x.AddedAt).HasColumnName("added_at");
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId);
+            e.HasIndex(x => new { x.CollectionId, x.ProductId }).IsUnique();
         });
     }
 }
