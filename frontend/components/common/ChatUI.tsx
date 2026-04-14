@@ -19,10 +19,10 @@ type ChatUIProps = {
 };
 
 const defaultMessages: ChatMessage[] = [
-  { id: '1', text: 'Xin chao, toi co the ho tro gi cho ban?', sender: 'other', time: '09:15' },
+  { id: '1', text: 'Xin chào, tôi có thể hỗ trợ gì cho bạn?', sender: 'other', time: '09:15' },
 ];
 
-const ChatUI: React.FC<ChatUIProps> = ({ title = 'Tin nhan', initialMessages = defaultMessages, onBackPress }) => {
+const ChatUI: React.FC<ChatUIProps> = ({ title = 'Tin nhắn', initialMessages = defaultMessages, onBackPress }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);

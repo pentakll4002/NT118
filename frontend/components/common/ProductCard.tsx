@@ -24,21 +24,21 @@ interface ProductCardProps {
   isMasonry?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ 
-  product, 
-  onPress, 
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onPress,
   isHorizontal = false,
-  isMasonry = false 
+  isMasonry = false
 }) => {
   const cardWidth = isHorizontal ? 170 : isMasonry ? (width - 40) / 2 : (width - 48) / 2;
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.productCard, 
+        styles.productCard,
         isHorizontal && styles.horizontalCard,
         isMasonry && { width: cardWidth, marginBottom: 12 }
-      ]} 
+      ]}
       onPress={() => onPress?.(product)}
       activeOpacity={0.9}
     >
@@ -47,25 +47,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
         isMasonry && product.imageHeight ? { height: product.imageHeight } : {}
       ]}>
         <Image source={product.image} style={styles.productImage} resizeMode="cover" />
+        {product.discount && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountBadgeText}>{product.discount}</Text>
+          </View>
+        )}
       </View>
       <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.productDesc} numberOfLines={2}>{product.description}</Text>
+        <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.productPrice}>{product.price}</Text>
         {product.originalPrice && (
           <View style={styles.priceRow}>
             <Text style={styles.originalPrice}>{product.originalPrice}</Text>
-            <Text style={styles.discountText}>{product.discount}</Text>
           </View>
         )}
         <View style={styles.ratingRow}>
           <View style={styles.stars}>
             {[1, 2, 3, 4, 5].map((i) => (
-              <Ionicons 
-                key={i} 
-                name={i <= Math.floor(product.rating) ? "star" : i - 0.5 <= product.rating ? "star-half" : "star-outline"} 
-                size={12} 
-                color={i <= product.rating + 0.5 ? "#EDB310" : "#A8A8A9"} 
+              <Ionicons
+                key={i}
+                name={i <= Math.floor(product.rating) ? "star" : i - 0.5 <= product.rating ? "star-half" : "star-outline"}
+                size={12}
+                color={i <= product.rating + 0.5 ? "#EDB310" : "#A8A8A9"}
               />
             ))}
           </View>
@@ -98,10 +101,25 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 128,
     backgroundColor: '#F0F0F0',
+    position: 'relative',
   },
   productImage: {
     width: '100%',
     height: '100%',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#F83758',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '600',
   },
   productInfo: {
     padding: 8,
@@ -110,6 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     fontFamily: 'Montserrat_500Medium',
+    lineHeight: 16,
   },
   productDesc: {
     fontSize: 10,
@@ -118,9 +137,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat_400Regular',
   },
   productPrice: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
+    color: '#F83758',
     fontFamily: 'Montserrat_600SemiBold',
   },
   priceRow: {
@@ -143,7 +163,7 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
     gap: 4,
   },
   stars: {

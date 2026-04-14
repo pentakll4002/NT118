@@ -157,6 +157,7 @@ CREATE TABLE IF NOT EXISTS products (
   status product_status DEFAULT 'active',
   weight_grams INTEGER,
   dimensions VARCHAR(50),
+  brand VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,

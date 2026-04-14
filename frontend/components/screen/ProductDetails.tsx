@@ -1,34 +1,77 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView, Dimensions, Platform, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView, Dimensions, Platform, StatusBar, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import ProductCard from '../common/ProductCard';
+import ProductCard, { Product } from '../common/ProductCard';
+import { getProductById, getProducts, ProductDTO, formatPriceFull, formatSold } from '../../lib/productApi';
 
 const { width } = Dimensions.get('window');
 
-const ProductDetails: React.FC = () => {
-  // Dummy related products
-  const relatedProducts = [
-    {
-      id: '1',
-      name: 'Giày Sneaker Trắng Basic Đế Cao Phối Đồ Cực Xinh',
-      description: '',
-      price: '₫850.000',
-      rating: 4.5,
-      reviews: 'Đã bán 1.2k',
-      image: require('../../assets/images/Group 34010.png'), // Fallback generic image
-      imageHeight: 180,
-    },
-    {
-      id: '2',
-      name: 'Giày Chạy Bộ Nam Nữ Siêu Nhẹ Air Max 2024',
-      description: '',
-      price: '₫1.100.000',
-      rating: 4.8,
-      reviews: 'Đã bán 845',
-      image: require('../../assets/images/Group 34010.png'), // Fallback generic image
-      imageHeight: 180,
+interface ProductDetailsProps {
+  productId?: number;
+}
+
+const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
+  const [product, setProduct] = useState<ProductDTO | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  useEffect(() => {
+    loadProduct();
+  }, [productId]);
+
+  const loadProduct = async () => {
+    try {
+      setLoading(true);
+      const data = await getProductById(productId);
+      setProduct(data);
+
+      // Load related products from same category
+      const related = await getProducts({ category: data.categoryId, pageSize: 4 });
+      setRelatedProducts(
+        related.data
+          .filter(p => p.id !== data.id)
+          .slice(0, 4)
+          .map(dto => ({
+            id: dto.id,
+            name: dto.name,
+            description: dto.description || '',
+            price: formatPriceFull(dto.price),
+            originalPrice: dto.originalPrice ? formatPriceFull(dto.originalPrice) : undefined,
+            discount: dto.discount > 0 ? `${dto.discount}% Off` : undefined,
+            rating: dto.rating,
+            reviews: formatSold(dto.soldQuantity),
+            image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+            imageHeight: 180,
+          }))
+      );
+    } catch (err) {
+      console.log('Failed to load product:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#F83758" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Đang tải sản phẩm...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#999" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Sản phẩm không tồn tại.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const discountPercent = product.discount > 0 ? `-${product.discount}%` : null;
+  const thumbnails = product.thumbnails?.length > 0 ? product.thumbnails : (product.image ? [product.image] : []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -53,18 +96,31 @@ const ProductDetails: React.FC = () => {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* Main Image Carousel placeholder */}
+        {/* Main Image Carousel */}
         <View style={styles.imageGallery}>
-          <View style={styles.mainImagePlaceholder}>
-            {/* The red shoe image placeholder */}
-            <Text style={{color: '#999'}}>Product Image (Red Sneaker)</Text>
-          </View>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+              setActiveImageIdx(idx);
+            }}
+          >
+            {thumbnails.map((img, idx) => (
+              <Image
+                key={idx}
+                source={{ uri: img }}
+                style={{ width, height: width * 0.8 }}
+                resizeMode="contain"
+              />
+            ))}
+          </ScrollView>
           {/* Pagination dots */}
           <View style={styles.pagination}>
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
+            {thumbnails.map((_, idx) => (
+              <View key={idx} style={[styles.dot, activeImageIdx === idx && styles.activeDot]} />
+            ))}
           </View>
         </View>
 
@@ -74,29 +130,38 @@ const ProductDetails: React.FC = () => {
             <View style={styles.mallBadge}>
               <Text style={styles.mallText}>MALL</Text>
             </View>
-            <Text style={styles.productTitle}>Giày Thể Thao Nam Nữ Sneaker Red Edition - Phiên Bản Giới Hạn Cao Cấp 2024</Text>
+            <Text style={styles.productTitle}>{product.name}</Text>
           </View>
           
           <View style={styles.priceRow}>
-            <Text style={styles.currentPrice}>₫1.250.000</Text>
-            <Text style={styles.oldPrice}>₫2.500.000</Text>
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>-50%</Text>
-            </View>
+            <Text style={styles.currentPrice}>{formatPriceFull(product.price)}</Text>
+            {product.originalPrice && (
+              <Text style={styles.oldPrice}>{formatPriceFull(product.originalPrice)}</Text>
+            )}
+            {discountPercent && (
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>{discountPercent}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.ratingHeartRow}>
             <View style={styles.ratingLeft}>
               <View style={styles.stars}>
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Ionicons key={i} name="star" size={14} color="#F83758" />
+                  <Ionicons
+                    key={i}
+                    name={i <= Math.floor(product.rating) ? "star" : i - 0.5 <= product.rating ? "star-half" : "star-outline"}
+                    size={14}
+                    color={i <= product.rating + 0.5 ? "#F83758" : "#CCCCCC"}
+                  />
                 ))}
               </View>
-              <Text style={styles.ratingNumber}>4.8</Text>
-              <Text style={styles.soldText}>Đã bán 2,4k</Text>
+              <Text style={styles.ratingNumber}>{product.rating.toFixed(1)}</Text>
+              <Text style={styles.soldText}>{formatSold(product.soldQuantity)}</Text>
             </View>
             <TouchableOpacity>
-              <Ionicons name="heart" size={24} color="#555" />
+              <Ionicons name="heart-outline" size={24} color="#555" />
             </TouchableOpacity>
           </View>
         </View>
@@ -130,25 +195,17 @@ const ProductDetails: React.FC = () => {
 
         <View style={styles.divider} />
 
-        {/* Variation Section */}
+        {/* Stock & Brand Info */}
         <View style={styles.variationSection}>
-          <TouchableOpacity style={styles.variationHeader}>
-            <Text style={styles.rowLabelPrimary}>Phân loại</Text>
-            <View style={styles.variationRight}>
-              <Text style={styles.selectedVariationText}>Đỏ, 42</Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
+          {product.brand && (
+            <View style={styles.variationHeader}>
+              <Text style={styles.rowLabelPrimary}>Thương hiệu</Text>
+              <Text style={styles.selectedVariationText}>{product.brand}</Text>
             </View>
-          </TouchableOpacity>
-          <View style={styles.variationButtonsRow}>
-            <TouchableOpacity style={styles.variationButton}>
-              <Text style={styles.variationButtonText}>Đỏ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.variationButton}>
-              <Text style={styles.variationButtonText}>Xanh</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.variationButton, styles.variationButtonSelected]}>
-              <Text style={[styles.variationButtonText, styles.variationButtonTextSelected]}>Đen</Text>
-            </TouchableOpacity>
+          )}
+          <View style={styles.variationHeader}>
+            <Text style={styles.rowLabelPrimary}>Tồn kho</Text>
+            <Text style={styles.selectedVariationText}>{product.stockQuantity} sản phẩm</Text>
           </View>
         </View>
 
@@ -157,14 +214,14 @@ const ProductDetails: React.FC = () => {
         {/* Shop Info */}
         <View style={styles.shopSection}>
           <View style={styles.shopAvatar}>
-            <Text style={styles.shopAvatarInitials}>SL</Text>
+            <Text style={styles.shopAvatarInitials}>GV</Text>
           </View>
           <View style={styles.shopInfoCenter}>
-            <Text style={styles.shopName}>ShopeeLite Premium Store</Text>
+            <Text style={styles.shopName}>GearVN Official</Text>
             <Text style={styles.shopOnlineStatus}>ONLINE 5 PHÚT TRƯỚC</Text>
             <View style={styles.shopStats}>
-              <Text style={styles.shopStatText}><Text style={styles.shopStatHighlight}>158</Text> Sản phẩm</Text>
-              <Text style={styles.shopStatText}><Text style={styles.shopStatHighlight}>4.9</Text> Đánh giá</Text>
+              <Text style={styles.shopStatText}><Text style={styles.shopStatHighlight}>3949</Text> Sản phẩm</Text>
+              <Text style={styles.shopStatText}><Text style={styles.shopStatHighlight}>4.8</Text> Đánh giá</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.viewShopButton}>
@@ -180,29 +237,30 @@ const ProductDetails: React.FC = () => {
           
           <View style={styles.detailDataRow}>
             <Text style={styles.detailDataLabel}>Danh mục</Text>
-            <Text style={styles.detailDataValueLink}>ShopeeLite &gt; Giày Nam &gt; Sneaker</Text>
+            <Text style={styles.detailDataValueLink}>ShopeeLite &gt; Công nghệ</Text>
           </View>
-          <View style={styles.detailDataRow}>
-            <Text style={styles.detailDataLabel}>Thương hiệu</Text>
-            <Text style={styles.detailDataValue}>No Brand</Text>
-          </View>
-          <View style={styles.detailDataRow}>
-            <Text style={styles.detailDataLabel}>Chất liệu</Text>
-            <Text style={styles.detailDataValue}>Da tổng hợp cao cấp, vải dệt mesh thoáng khí</Text>
-          </View>
+          {product.brand && (
+            <View style={styles.detailDataRow}>
+              <Text style={styles.detailDataLabel}>Thương hiệu</Text>
+              <Text style={styles.detailDataValue}>{product.brand}</Text>
+            </View>
+          )}
+          {product.dimensions && (
+            <View style={styles.detailDataRow}>
+              <Text style={styles.detailDataLabel}>Kích thước</Text>
+              <Text style={styles.detailDataValue}>{product.dimensions} cm</Text>
+            </View>
+          )}
+          {product.weightGrams && (
+            <View style={styles.detailDataRow}>
+              <Text style={styles.detailDataLabel}>Trọng lượng</Text>
+              <Text style={styles.detailDataValue}>{product.weightGrams}g</Text>
+            </View>
+          )}
 
-          <Text style={styles.detailDescriptionParagraph}>
-            Giày Sneaker Red Edition là sự kết hợp hoàn hảo giữa phong cách thời trang hiện đại và sự thoải mái tối đa.
-          </Text>
-          <Text style={styles.detailDescriptionBullet}>
-            • Đế cao su đúc nguyên khối, chống trơn trượt hiệu quả.
-          </Text>
-          <Text style={styles.detailDescriptionBullet}>
-            • Lót giày êm ái, hỗ trợ vận động trong thời gian dài.
-          </Text>
-          <Text style={styles.detailDescriptionBullet}>
-            • Thiết kế trẻ trung, dễ dàng phối đồ cho nhiều dịp khác nhau.
-          </Text>
+          {product.description ? (
+            <Text style={styles.detailDescriptionParagraph}>{product.description}</Text>
+          ) : null}
 
           <TouchableOpacity style={styles.viewMoreButton}>
             <Text style={styles.viewMoreText}>Xem thêm</Text>
@@ -213,20 +271,22 @@ const ProductDetails: React.FC = () => {
         <View style={styles.divider} />
 
         {/* Similar Products */}
-        <View style={styles.similarProductsSection}>
-          <View style={styles.similarHeader}>
-            <Text style={styles.detailsTitle}>SẢN PHẨM TƯƠNG TỰ</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllTextRed}>Xem tất cả</Text>
-            </TouchableOpacity>
+        {relatedProducts.length > 0 && (
+          <View style={styles.similarProductsSection}>
+            <View style={styles.similarHeader}>
+              <Text style={styles.detailsTitle}>SẢN PHẨM TƯƠNG TỰ</Text>
+              <TouchableOpacity>
+                <Text style={styles.viewAllTextRed}>Xem tất cả</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.productsGrid}>
+              {relatedProducts.map((prod) => (
+                <ProductCard key={prod.id} product={prod as any} />
+              ))}
+            </View>
           </View>
-          
-          <View style={styles.productsGrid}>
-            {relatedProducts.map((prod) => (
-              <ProductCard key={prod.id} product={prod as any} />
-            ))}
-          </View>
-        </View>
+        )}
 
         {/* Bottom padding for floating bar */}
         <View style={{ height: 60 }} />
@@ -315,15 +375,9 @@ const styles = StyleSheet.create({
   },
   imageGallery: {
     width: width,
-    height: width * 0.8, // 4:3 roughly
+    height: width * 0.8,
     position: 'relative',
-    backgroundColor: '#404040',
-  },
-  mainImagePlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EBEBEB',
+    backgroundColor: '#FFFFFF',
   },
   pagination: {
     position: 'absolute',
@@ -490,37 +544,10 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontWeight: '500',
   },
-  variationRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   selectedVariationText: {
     fontSize: 13,
     color: '#777777',
     marginRight: 8,
-  },
-  variationButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  variationButton: {
-    borderWidth: 1,
-    borderColor: '#EFEFEF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-  },
-  variationButtonSelected: {
-    borderColor: '#F83758',
-    backgroundColor: '#FFF0F1',
-  },
-  variationButtonText: {
-    fontSize: 12,
-    color: '#333333',
-  },
-  variationButtonTextSelected: {
-    color: '#F83758',
-    fontWeight: '500',
   },
   shopSection: {
     flexDirection: 'row',
@@ -615,12 +642,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 12,
     marginBottom: 8,
-  },
-  detailDescriptionBullet: {
-    fontSize: 13,
-    color: '#444444',
-    lineHeight: 20,
-    marginBottom: 4,
   },
   viewMoreButton: {
     flexDirection: 'row',

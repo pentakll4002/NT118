@@ -1,16 +1,44 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 
 export interface Category {
   id: number;
   name: string;
-  image: any;
+  image?: any;
+  icon?: {
+    library: 'Feather' | 'Ionicons' | 'MaterialCommunityIcons' | 'FontAwesome5' | 'MaterialIcons';
+    name: string;
+    color: string;
+    size?: number;
+  };
+  bgColor?: string;
 }
 
 interface CategoriesProps {
   categories: Category[];
 }
+
+const IconRenderer = ({ icon }: { icon: Category['icon'] }) => {
+  if (!icon) return null;
+  const size = icon.size || 28;
+  const props = { name: icon.name as any, size, color: icon.color };
+
+  switch (icon.library) {
+    case 'Feather':
+      return <Feather {...props} />;
+    case 'Ionicons':
+      return <Ionicons {...props} />;
+    case 'MaterialCommunityIcons':
+      return <MaterialCommunityIcons {...props} />;
+    case 'FontAwesome5':
+      return <FontAwesome5 {...props} />;
+    case 'MaterialIcons':
+      return <MaterialIcons {...props} />;
+    default:
+      return null;
+  }
+};
 
 const Categories: React.FC<CategoriesProps> = ({ categories }) => {
   return (
@@ -35,10 +63,14 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
       >
         {categories.map((item) => (
           <TouchableOpacity key={item.id} style={styles.categoryItem}>
-            <View style={styles.imageContainer}>
-              <Image source={item.image} style={styles.image} resizeMode="cover" />
+            <View style={[styles.imageContainer, item.bgColor ? { backgroundColor: item.bgColor } : null]}>
+              {item.icon ? (
+                <IconRenderer icon={item.icon} />
+              ) : item.image ? (
+                <Image source={item.image} style={styles.image} resizeMode="cover" />
+              ) : null}
             </View>
-            <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -105,6 +137,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     overflow: 'hidden',
     marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
