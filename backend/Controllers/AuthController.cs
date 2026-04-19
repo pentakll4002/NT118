@@ -19,7 +19,7 @@ public class AuthController(IAuthService auth) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponses.Fail(ex.Message));
         }
     }
 
@@ -34,7 +34,7 @@ public class AuthController(IAuthService auth) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponses.Fail(ex.Message));
         }
     }
 
@@ -49,7 +49,7 @@ public class AuthController(IAuthService auth) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponses.Fail(ex.Message));
         }
     }
 
@@ -64,7 +64,7 @@ public class AuthController(IAuthService auth) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponses.Fail(ex.Message));
         }
     }
 
@@ -79,7 +79,7 @@ public class AuthController(IAuthService auth) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponses.Fail(ex.Message));
         }
     }
 }

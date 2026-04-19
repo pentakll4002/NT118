@@ -2,26 +2,53 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Contracts;
 
-public record RegisterRequest(
-	[property: Required, EmailAddress, MaxLength(100)] string Email,
-	[property: Required, MinLength(6), MaxLength(128)] string Password,
-	[property: Required, MinLength(4), MaxLength(20)] string CaptchaCode);
+public class RegisterRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
 
-public record LoginRequest(
-	[property: Required, EmailAddress, MaxLength(100)] string Email,
-	[property: Required, MinLength(6), MaxLength(128)] string Password);
+    [Required, MinLength(6), MaxLength(128)]
+    public string Password { get; set; } = string.Empty;
 
-public record ForgotPasswordRequest([property: Required, EmailAddress, MaxLength(100)] string Email);
+    [Required, MinLength(4), MaxLength(20)]
+    public string CaptchaCode { get; set; } = string.Empty;
+}
 
-public record ResetPasswordRequest(
-	[property: Required, EmailAddress, MaxLength(100)] string Email,
-	[property: Required, MinLength(4), MaxLength(20)] string Code,
-	[property: Required, MinLength(6), MaxLength(128)] string NewPassword);
+public class LoginRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, MinLength(6), MaxLength(128)]
+    public string Password { get; set; } = string.Empty;
+}
+
+public class ForgotPasswordRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, MinLength(4), MaxLength(20)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required, MinLength(6), MaxLength(128)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class SendRegisterCaptchaRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+}
 
 public record AuthResponse(string Token, long UserId, string Email);
 
 public record ForgotPasswordResponse(string Message, string? ResetCode);
 
 public record MessageResponse(string Message);
-
-public record SendRegisterCaptchaRequest([property: Required, EmailAddress, MaxLength(100)] string Email);

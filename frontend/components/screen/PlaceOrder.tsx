@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaVi
 import { Ionicons } from '@expo/vector-icons';
 import { getProductById, ProductDTO, formatPriceFull } from '../../lib/productApi';
 import { toggleFavorite, getFavoriteStatus } from '../../lib/wishlistApi';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 
 interface PlaceOrderProps {
   productId?: number;
@@ -90,7 +90,7 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
               <View style={styles.productImagePlaceholder} />
             )}
           </View>
-          
+
           <View style={styles.productInfo}>
             <Text style={styles.productTitle} numberOfLines={2}>
               {product?.name || 'Sản phẩm'}
@@ -98,7 +98,7 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
             <Text style={styles.productSubtitle} numberOfLines={1}>
               {product?.brand || product?.description?.slice(0, 40) || ''}
             </Text>
-            
+
             <View style={styles.dropdownsRow}>
               <TouchableOpacity style={styles.dropdownButton}>
                 <Text style={styles.dropdownText}>Qty <Text style={styles.dropdownBold}>{qty}</Text></Text>
@@ -153,7 +153,7 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
             <Text style={styles.totalValue}>{formatPriceFull(totalAmount)}</Text>
           </View>
         </View>
-        
+
         {/* Extra spacing for scroll padding */}
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -166,9 +166,11 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
             <Text style={styles.viewDetailsText}>Xem chi tiết</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.checkoutButton}>
-          <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
-        </TouchableOpacity>
+        <Link href="/payment" asChild>
+          <TouchableOpacity style={styles.checkoutButton} activeOpacity={0.8}>
+            <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     </SafeAreaView>
   );

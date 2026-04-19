@@ -35,7 +35,7 @@ export interface ProductListParams {
   page?: number;
   pageSize?: number;
   category?: number;
-  search?: string;
+  q?: string;
   brand?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'rating' | 'popular';
 }
@@ -72,7 +72,22 @@ export function formatSold(sold: number): string {
  */
 export async function getProducts(params: ProductListParams = {}): Promise<PaginatedResponse<ProductDTO>> {
   const res = await apiClient.get('/api/products', { params });
-  return res.data;
+  const payload = res.data?.data || res.data; // Catch C# wrapper { success, data: {...} }
+
+  const mappedItems = (payload.items || payload.Items || []).map((x: any) => ({
+    ...x,
+    image: x.mainImageUrl || x.image || x.Image || null
+  }));
+
+  return {
+    data: mappedItems,
+    pagination: {
+      page: payload.page || payload.Page || 1,
+      pageSize: payload.pageSize || payload.PageSize || 20,
+      total: payload.totalItems || payload.totalCount || payload.TotalCount || 0,
+      totalPages: Math.ceil((payload.totalItems || payload.totalCount || 1) / (payload.pageSize || 20))
+    }
+  };
 }
 
 /**
@@ -80,13 +95,16 @@ export async function getProducts(params: ProductListParams = {}): Promise<Pagin
  */
 export async function getProductById(id: number): Promise<ProductDTO> {
   const res = await apiClient.get(`/api/products/${id}`);
-  return res.data;
+  const payload = res.data?.data || res.data;
+  return {
+    ...payload,
+    image: payload.mainImageUrl || payload.image || payload.Image || null,
+    thumbnails: payload.images?.map((i: any) => i.imageUrl) || []
+  };
 }
 
-/**
- * Fetch featured products (best rated + popular)
- */
 export async function getFeaturedProducts(limit: number = 10): Promise<ProductDTO[]> {
-  const res = await apiClient.get('/api/products/featured', { params: { limit } });
+  const params: ProductListParams = { page: 1, pageSize: limit, sort: 'rating' };
+  const res = await getProducts(params);
   return res.data;
 }
