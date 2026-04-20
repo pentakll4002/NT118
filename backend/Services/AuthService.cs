@@ -149,7 +149,8 @@ public class AuthService(
     private AuthResponse CreateAuthResponse(User user)
     {
         var token = CreateJwt(user);
-        return new AuthResponse(token, user.Id, user.Email);
+        // Include the user's role so the client can route to the correct screen
+        return new AuthResponse(token, user.Id, user.Email, user.Role.ToString());
     }
 
     private string CreateJwt(User user)

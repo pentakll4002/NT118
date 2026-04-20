@@ -5,6 +5,7 @@ export type AuthResponse = {
   token: string;
   userId: number;
   email: string;
+  role: 'buyer' | 'seller' | 'admin';
 };
 
 export type ForgotPasswordResponse = {
@@ -27,9 +28,25 @@ function extractMessage(err: unknown): string {
 }
 
 export async function loginRequest(email: string, password: string): Promise<AuthResponse> {
+  const lowerEmail = email.trim().toLowerCase();
+
+  // --- MOCK LOGIN BYPASS (Frontend Only Testing) ---
+  if (lowerEmail === 'seller@test.com' || lowerEmail === 'buyer@test.com') {
+    const mockRole: 'seller' | 'buyer' = lowerEmail.includes('seller') ? 'seller' : 'buyer';
+    const mockData: AuthResponse = {
+      token: 'mock-jwt-token-for-testing',
+      userId: 999,
+      email: lowerEmail,
+      role: mockRole,
+    };
+    await saveAuthToken(mockData.token);
+    return mockData;
+  }
+  // ------------------------------------------------
+
   try {
     const { data } = await apiClient.post<AuthResponse>('/api/auth/login', {
-      email: email.trim(),
+      email: lowerEmail,
       password,
     });
     const tokenStr = data.token || (data as any).Token || (data as any).data?.token;

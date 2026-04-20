@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
-import SearchDetail from './SearchDetail';
 import Categories, { Category } from '../common/Categories';
 import Banner from '../common/Banner';
 import SectionHeader from '../common/SectionHeader';
@@ -217,10 +216,10 @@ const HomePage = () => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <SearchDetail 
+      {/* <SearchDetail 
         visible={isSearchVisible} 
         onClose={() => setIsSearchVisible(false)} 
-      />
+      /> */}
     </SafeAreaView>
   );
 };

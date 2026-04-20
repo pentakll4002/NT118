@@ -18,7 +18,7 @@ public record ResetPasswordRequest(
 	[property: Required, MinLength(4), MaxLength(20)] string Code,
 	[property: Required, MinLength(6), MaxLength(128)] string NewPassword);
 
-public record AuthResponse(string Token, long UserId, string Email);
+public record AuthResponse(string Token, long UserId, string Email, string Role);
 
 public record ForgotPasswordResponse(string Message, string? ResetCode);
 

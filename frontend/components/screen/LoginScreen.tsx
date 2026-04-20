@@ -34,8 +34,13 @@ const LoginScreen = () => {
     }
     setSubmitting(true);
     try {
-      await loginRequest(email, password);
-      router.replace('/(tabs)');
+      const result = await loginRequest(email, password);
+      // Route based on user role returned from the API
+      if (result.role === 'seller') {
+        router.replace('/seller-dashboard' as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e) {
       Alert.alert('Đăng nhập thất bại', e instanceof Error ? e.message : 'Lỗi không xác định');
     } finally {

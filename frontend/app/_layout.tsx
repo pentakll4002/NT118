@@ -85,6 +85,7 @@ export default function RootLayout() {
             <Stack.Screen name="get-started" />
             <Stack.Screen name="splash-follow" />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="seller-dashboard" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
           <StatusBar style="auto" />

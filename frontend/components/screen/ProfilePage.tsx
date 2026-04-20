@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import InfoInput from '../common/InfoInput';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
 const ProfilePage = () => {
+  const router = useRouter();
   const [profile, setProfile] = React.useState({
     name: 'Ân',
     gender: 'Nam',
@@ -93,6 +95,20 @@ const ProfilePage = () => {
               <Ionicons name="add-circle-outline" size={32} color="black" />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Seller Mode Entry */}
+        <View style={styles.sellerSection}>
+          <TouchableOpacity 
+            style={styles.sellerButton}
+            onPress={() => router.push('/seller-dashboard')}
+          >
+            <View style={styles.sellerButtonLeft}>
+              <MaterialCommunityIcons name="storefront-outline" size={24} color="#F73658" />
+              <Text style={styles.sellerButtonText}>Kênh người bán</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#676767" />
+          </TouchableOpacity>
         </View>
 
         {/* Save Button */}
@@ -230,6 +246,30 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontFamily: 'Montserrat_600SemiBold',
+  },
+  sellerSection: {
+    marginHorizontal: 24,
+    marginTop: 24,
+    backgroundColor: '#FFF5F6',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFEBEE',
+  },
+  sellerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  sellerButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sellerButtonText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat_600SemiBold',
+    color: '#000',
   },
 });
 
