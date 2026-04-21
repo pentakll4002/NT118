@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from api import chat
 
 try:
@@ -10,10 +11,35 @@ except Exception as e:
     upload_available = False
 import config.setting as config
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from ingestion.ingest import DocumentIngester
+        from vectorstore.create import get_vector_store
+        import os
+
+        knowledge_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data", "raw", "ecommerce_knowledge.md"
+        )
+
+        vector_store = get_vector_store()
+        if vector_store is None and os.path.exists(knowledge_file):
+            print("Initializing knowledge base from ecommerce_knowledge.md...")
+            ingester = DocumentIngester()
+            result = ingester.ingest_file(knowledge_file, {"source": "ShopeeLite Knowledge Base"})
+            print(f"Knowledge base initialized: {result['num_chunks']} chunks indexed")
+        else:
+            print("Knowledge base already exists or file not found, skipping ingestion")
+    except Exception as e:
+        print(f"Warning: Auto-ingestion skipped: {e}")
+    yield
+
 app = FastAPI(
     title="ShopeeLite E-Commerce Chatbot API",
     description="AI-powered e-commerce consultant and customer care chatbot",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -63,28 +89,7 @@ async def health():
         }
 
 
-@app.on_event("startup")
-async def startup_event():
-    try:
-        from ingestion.ingest import DocumentIngester
-        from vectorstore.create import get_vector_store
-        import os
 
-        knowledge_file = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "data", "raw", "ecommerce_knowledge.md"
-        )
-
-        vector_store = get_vector_store()
-        if vector_store is None and os.path.exists(knowledge_file):
-            print("Initializing knowledge base from ecommerce_knowledge.md...")
-            ingester = DocumentIngester()
-            result = ingester.ingest_file(knowledge_file, {"source": "ShopeeLite Knowledge Base"})
-            print(f"Knowledge base initialized: {result['num_chunks']} chunks indexed")
-        else:
-            print("Knowledge base already exists or file not found, skipping ingestion")
-    except Exception as e:
-        print(f"Warning: Auto-ingestion skipped: {e}")
 
 
 if __name__ == "__main__":

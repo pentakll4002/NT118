@@ -1,19 +1,68 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Map from '../screen/Map';
 
-export default function PaymentAddressSection() {
+export interface UserAddressType {
+  id: number;
+  recipientName: string;
+  recipientPhone: string;
+  province: string;
+  district: string;
+  ward: string;
+  streetAddress: string;
+  isDefault: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  poiName?: string | null;
+  formattedAddress?: string | null;
+}
+
+interface PaymentAddressSectionProps {
+  address?: UserAddressType | null;
+  onPress?: () => void;
+}
+
+export default function PaymentAddressSection({ address, onPress }: PaymentAddressSectionProps) {
+  if (!address) {
+    return (
+      <View style={styles.sectionBlock}>
+        <TouchableOpacity style={styles.addressContainer} onPress={onPress}>
+          <Ionicons name="location" size={20} color="#F83758" style={styles.locationIcon} />
+          <View style={styles.addressTextContainer}>
+            <Text style={styles.addressName}>Chưa có địa chỉ giao hàng</Text>
+            <Text style={styles.addressDetail}>Vui lòng thêm địa chỉ giao hàng để tiếp tục</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#BBBBBB" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.sectionBlock}>
-      <View style={styles.addressContainer}>
+      <TouchableOpacity style={styles.addressContainer} onPress={onPress}>
         <Ionicons name="location" size={20} color="#F83758" style={styles.locationIcon} />
         <View style={styles.addressTextContainer}>
-          <Text style={styles.addressName}>Thiên Ân <Text style={styles.addressPhone}>(+84) 982 685 374</Text></Text>
-          <Text style={styles.addressDetail}>47/5/6, Đường 120, Kp 2</Text>
-          <Text style={styles.addressDetail}>Phường Tân Phú, Thành Phố Thủ Đức, TP. Hồ Chí Minh</Text>
+          <Text style={styles.addressName}>{address.recipientName} <Text style={styles.addressPhone}>({address.recipientPhone})</Text></Text>
+          <Text style={styles.addressDetail}>{address.streetAddress}</Text>
+          <Text style={styles.addressDetail}>{address.ward}, {address.district}, {address.province}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#BBBBBB" />
-      </View>
+      </TouchableOpacity>
+
+      {/* Show the map here */}
+      {typeof address.latitude === 'number' && typeof address.longitude === 'number' ? (
+        <Map
+          latitude={address.latitude}
+          longitude={address.longitude}
+          title={address.poiName || 'Vị trí giao hàng'}
+          description={
+            address.formattedAddress ||
+            `${address.streetAddress}${address.streetAddress ? ', ' : ''}${address.ward}, ${address.district}, ${address.province}`
+          }
+        />
+      ) : null}
     </View>
   );
 }

@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 
 interface PaymentBottomBarProps {
   finalTotal: number;
   savings: number;
   onOrderPress: () => void;
+  loading?: boolean;
 }
 
-export default function PaymentBottomBar({ finalTotal, savings, onOrderPress }: PaymentBottomBarProps) {
+export default function PaymentBottomBar({ finalTotal, savings, onOrderPress, loading }: PaymentBottomBarProps) {
   return (
     <View style={styles.bottomBar}>
       <View style={styles.bottomLeft}>
@@ -20,8 +21,16 @@ export default function PaymentBottomBar({ finalTotal, savings, onOrderPress }: 
            <Text style={styles.bottomSavingPrice}>{savings.toLocaleString('vi-VN')}đ</Text>
          </View>
       </View>
-      <TouchableOpacity style={styles.orderButton} onPress={onOrderPress}>
-        <Text style={styles.orderButtonText}>Đặt hàng</Text>
+      <TouchableOpacity 
+        style={[styles.orderButton, loading && styles.disabledButton]} 
+        onPress={onOrderPress}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFF" size="small" />
+        ) : (
+          <Text style={styles.orderButtonText}>Đặt hàng</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -76,6 +85,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 4,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#FFA4B4',
   },
   orderButtonText: {
     color: '#FFF',

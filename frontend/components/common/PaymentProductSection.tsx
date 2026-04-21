@@ -2,31 +2,54 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+export type CheckoutCartItem = {
+  id: number;
+  productId: number;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  mainImageUrl?: string | null;
+  variantName?: string | null;
+  variantValue?: string | null;
+};
+
 interface PaymentProductSectionProps {
   insuranceSelected: boolean;
   setInsuranceSelected: (val: boolean) => void;
+  items: CheckoutCartItem[];
 }
 
-export default function PaymentProductSection({ insuranceSelected, setInsuranceSelected }: PaymentProductSectionProps) {
+export default function PaymentProductSection({ insuranceSelected, setInsuranceSelected, items }: PaymentProductSectionProps) {
   return (
     <View style={styles.sectionBlock}>
       <View style={styles.shopHeader}>
         <View style={styles.mallBadge}><Text style={styles.mallText}>Yêu thích</Text></View>
-        <Text style={styles.shopName}>Norah House</Text>
+        <Text style={styles.shopName}>Sản phẩm</Text>
       </View>
-      <View style={styles.productRow}>
-        <Image source={require('../../assets/images/Group 34010.png')} style={styles.productImage} />
-        <View style={styles.productDetails}>
-          <Text style={styles.productName} numberOfLines={2}>Quần suông nữ ống rộng Unisex, quần nỉ cạp ...</Text>
-          <Text style={styles.productVariant}>đen trơn, s (dưới 50kg)</Text>
-          <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>Shopee Video</Text></View>
-          <View style={styles.priceRow}>
-            <Text style={styles.currentPrice}>69.000đ</Text>
-            <Text style={styles.originalPrice}>89.000đ</Text>
-            <Text style={styles.quantity}>x1</Text>
+      {items.map((item) => (
+        <View key={item.id} style={styles.productRow}>
+          {item.mainImageUrl ? (
+            <Image source={{ uri: item.mainImageUrl }} style={styles.productImage} />
+          ) : (
+            <Image source={require('../../assets/images/Group 34010.png')} style={styles.productImage} />
+          )}
+          <View style={styles.productDetails}>
+            <Text style={styles.productName} numberOfLines={2}>{item.productName}</Text>
+            {(item.variantName || item.variantValue) ? (
+              <Text style={styles.productVariant}>
+                {[item.variantName, item.variantValue].filter(Boolean).join(': ')}
+              </Text>
+            ) : null}
+            <View style={styles.priceRow}>
+              <Text style={styles.currentPrice}>
+                {item.unitPrice.toLocaleString('vi-VN')}đ
+              </Text>
+              <Text style={styles.originalPrice} />
+              <Text style={styles.quantity}>x{item.quantity}</Text>
+            </View>
           </View>
         </View>
-      </View>
+      ))}
       
       <View style={styles.insuranceRow}>
         <TouchableOpacity onPress={() => setInsuranceSelected(!insuranceSelected)}>

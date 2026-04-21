@@ -7,34 +7,30 @@ export default function PaymentMethodSection() {
     <View style={styles.sectionBlock}>
       <View style={styles.rowItemPayment}>
         <Text style={styles.paymentTitleTitle}>Phương thức thanh toán</Text>
-        <TouchableOpacity style={styles.rowRight}>
-           <Text style={styles.shippingMore}>Xem tất cả</Text>
-           <Ionicons name="chevron-forward" size={16} color="#888" />
-         </TouchableOpacity>
       </View>
 
       <View style={styles.paymentMethodRow}>
         <View style={styles.paymentMethodLeft}>
-          <Ionicons name="cash" size={24} color="#F83758" />
+          <Ionicons name="cash" size={24} color="#888" />
           <Text style={styles.paymentMethodName}>  Thanh toán khi nhận hàng</Text>
         </View>
-        <MaterialCommunityIcons name="check-circle" size={24} color="#F83758" />
+        <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={24} color="#888" />
       </View>
       
-      <View style={styles.paymentSPayHeader}>
-        <Ionicons name="card" size={20} color="#F83758" />
-        <Text style={styles.paymentSPayTitle}>  ShopeePay</Text>
+      <View style={styles.paymentMethodRow}>
+        <View style={styles.paymentMethodLeft}>
+          <MaterialCommunityIcons name="credit-card-outline" size={24} color="#F83758" />
+          <Text style={styles.paymentMethodName}>  VNPay (Ví điện tử / Thẻ ATM)</Text>
+        </View>
+        <MaterialCommunityIcons name="check-circle" size={24} color="#F83758" />
       </View>
 
       <View style={styles.paymentChild}>
          <View style={styles.spayBalanceRow}>
            <View style={styles.spayBalanceCol}>
-             <Text style={styles.paymentMethodName}>Số dư Ví ShopeePay</Text>
-             <Text style={styles.spayDiscount}>Giảm thêm 100.000đ</Text>
+             <Text style={styles.vnpayDesc}>Thanh toán an toàn qua cổng VNPay.</Text>
+             <Text style={styles.spayDiscount}>Mở app ngân hàng để quét mã QR</Text>
            </View>
-           <TouchableOpacity style={styles.activationButton}>
-             <Text style={styles.activationText}>Kích hoạt ngay</Text>
-           </TouchableOpacity>
          </View>
       </View>
     </View>
@@ -81,15 +77,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
   },
-  paymentSPayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  paymentSPayTitle: {
-    fontSize: 14,
-    color: '#F83758',
-    fontWeight: '500',
+  vnpayDesc: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 4,
   },
   paymentChild: {
     marginLeft: 28,
@@ -105,24 +96,13 @@ const styles = StyleSheet.create({
   spayBalanceCol: {},
   spayDiscount: {
     fontSize: 10,
-    color: '#F83758',
+    color: '#009688',
     borderWidth: 1,
-    borderColor: '#F83758',
+    borderColor: '#009688',
     borderRadius: 2,
     alignSelf: 'flex-start',
     paddingHorizontal: 4,
     paddingVertical: 2,
     marginTop: 4,
-  },
-  activationButton: {
-    borderWidth: 1,
-    borderColor: '#F83758',
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  activationText: {
-    color: '#F83758',
-    fontSize: 12,
   },
 });

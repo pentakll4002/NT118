@@ -38,7 +38,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
       } catch { /* user not logged in */ }
 
       // Load related products from same category
-      const related = await getProducts({ category: data.categoryId, pageSize: 4 });
+      const related = await getProducts({ categoryId: data.categoryId, pageSize: 4 });
       setRelatedProducts(
         related.data
           .filter(p => p.id !== data.id)
@@ -91,7 +91,9 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
         <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#F83758" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {product.name}
+        </Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconButton}>
             <Ionicons name="share-social-outline" size={24} color="#F83758" />

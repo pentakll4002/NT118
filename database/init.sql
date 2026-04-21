@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE IF EXISTS users
+  ADD COLUMN IF NOT EXISTS status user_status DEFAULT 'active';
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW 
@@ -65,6 +69,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   UNIQUE(user_id)
 );
 
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
 CREATE TRIGGER update_user_profiles_updated_at 
     BEFORE UPDATE ON user_profiles 
     FOR EACH ROW 
@@ -104,6 +109,10 @@ CREATE TABLE IF NOT EXISTS categories (
   FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
+ALTER TABLE IF EXISTS categories
+  ADD COLUMN IF NOT EXISTS status category_status DEFAULT 'active';
+
+DROP TRIGGER IF EXISTS update_categories_updated_at ON categories;
 CREATE TRIGGER update_categories_updated_at 
     BEFORE UPDATE ON categories 
     FOR EACH ROW 
@@ -133,10 +142,15 @@ CREATE TABLE IF NOT EXISTS shops (
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+DROP TRIGGER IF EXISTS update_shops_updated_at ON shops;
 CREATE TRIGGER update_shops_updated_at 
     BEFORE UPDATE ON shops 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE IF EXISTS shops
+  ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS status shop_status DEFAULT 'active';
 
 CREATE INDEX IF NOT EXISTS idx_shops_active_rating ON shops(rating) WHERE status = 'active';
 
@@ -164,6 +178,10 @@ CREATE TABLE IF NOT EXISTS products (
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );
 
+ALTER TABLE IF EXISTS products
+  ADD COLUMN IF NOT EXISTS status product_status DEFAULT 'active';
+
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
 CREATE TRIGGER update_products_updated_at 
     BEFORE UPDATE ON products 
     FOR EACH ROW 
@@ -260,6 +278,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
   CHECK (quantity > 0)
 );
 
+DROP TRIGGER IF EXISTS update_cart_items_updated_at ON cart_items;
 CREATE TRIGGER update_cart_items_updated_at 
     BEFORE UPDATE ON cart_items 
     FOR EACH ROW 
@@ -339,6 +358,11 @@ CREATE TABLE IF NOT EXISTS orders (
   FOREIGN KEY (shop_voucher_id) REFERENCES shop_vouchers(id)
 );
 
+ALTER TABLE IF EXISTS orders
+  ADD COLUMN IF NOT EXISTS payment_status payment_status DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS status order_status DEFAULT 'pending';
+
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
 CREATE TRIGGER update_orders_updated_at 
     BEFORE UPDATE ON orders 
     FOR EACH ROW 
@@ -384,6 +408,10 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
+ALTER TABLE IF EXISTS payments
+  ADD COLUMN IF NOT EXISTS status payment_status DEFAULT 'pending';
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at 
     BEFORE UPDATE ON payments 
     FOR EACH ROW 
@@ -409,6 +437,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
 CREATE TRIGGER update_reviews_updated_at 
     BEFORE UPDATE ON reviews 
     FOR EACH ROW 

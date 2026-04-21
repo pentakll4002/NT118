@@ -1,26 +1,62 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import PaymentAddressSection from '../common/PaymentAddressSection';
-import PaymentProductSection from '../common/PaymentProductSection';
+import PaymentAddressSection, { UserAddressType } from '../common/PaymentAddressSection';
+import PaymentProductSection, { CheckoutCartItem } from '../common/PaymentProductSection';
 import PaymentShippingSection from '../common/PaymentShippingSection';
-import PaymentShopeeVoucherSection from '../common/PaymentShopeeVoucherSection';
 import PaymentMethodSection from '../common/PaymentMethodSection';
 import PaymentSummarySection from '../common/PaymentSummarySection';
 import PaymentBottomBar from '../common/PaymentBottomBar';
+import AddressSelectionPage from './AddressSelectionPage';
+import AddAddressPage from './AddAddressPage';
+import { apiClient } from '../../lib/apiClient';
 
 interface PaymentPageProps {
   onClose: () => void;
   totalAmount: number;
 }
 
-export default function PaymentPage({ onClose, totalAmount }: PaymentPageProps) {
-  const [useCoins, setUseCoins] = useState(false);
-  const [insuranceSelected, setInsuranceSelected] = useState(false);
+type ScreenState = 'payment' | 'address_selection' | 'add_address';
 
-  // Mock data calculations based on screenshots
-  const productPrice = 69000;
+export default function PaymentPage({ onClose, totalAmount }: PaymentPageProps) {
+  const [activeScreen, setActiveScreen] = useState<ScreenState>('payment');
+  const [insuranceSelected, setInsuranceSelected] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddressType | null>(null);
+  const [cartItems, setCartItems] = useState<CheckoutCartItem[]>([]);
+
+  const fetchAddress = async () => {
+    try {
+      const response = await apiClient.get('/api/user/addresses');
+      const addresses = response.data?.data || response.data;
+      if (addresses && addresses.length > 0) {
+        const defaultAddr = addresses.find((a: UserAddressType) => a.isDefault) || addresses[0];
+        setSelectedAddress(defaultAddr);
+      }
+    } catch (error) {
+      console.log("Failed to fetch address:", error);
+    }
+  };
+
+  const fetchCart = async () => {
+    try {
+      const response = await apiClient.get('/api/user/cart');
+      const data = response.data?.data || response.data;
+      setCartItems(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log('Failed to fetch cart:', error);
+      setCartItems([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchAddress();
+    fetchCart();
+  }, []);
+
+  const totalQuantity = cartItems.reduce((sum, x) => sum + (x.quantity || 0), 0);
+  const productPrice = cartItems.reduce((sum, x) => sum + (x.unitPrice || 0) * (x.quantity || 0), 0);
   const shippingFee = 35700;
   const shippingDiscount = -19700;
   const insurancePrice = 579;
@@ -29,6 +65,63 @@ export default function PaymentPage({ onClose, totalAmount }: PaymentPageProps) 
   let finalTotal = productPrice + finalShipping; 
   if (insuranceSelected) finalTotal += insurancePrice;
   const savings = Math.abs(shippingDiscount) + 20000;
+
+  const handleVNPayCheckout = async () => {
+    try {
+      if (!selectedAddress) {
+        Alert.alert("Lỗi", "Vui lòng thêm địa chỉ giao hàng trước khi thanh toán.");
+        return;
+      }
+
+      setIsProcessing(true);
+      const response = await apiClient.post('/api/payments/vnpay/create', {
+        amount: finalTotal,
+        orderId: 1, // Mock
+        currency: "VND",
+        paymentMethod: "vnpay"
+      });
+      
+      const payload = response.data?.data || response.data;
+      if (payload && payload.paymentUrl) {
+        await Linking.openURL(payload.paymentUrl);
+        onClose();
+      } else {
+        throw new Error("Không thể lấy URL thanh toán từ server.");
+      }
+    } catch (error) {
+      Alert.alert("Lỗi thanh toán", "Không thể tạo giao dịch VNPay lúc này.");
+      console.log(error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (activeScreen === 'address_selection') {
+    return (
+      <AddressSelectionPage 
+        onBack={() => setActiveScreen('payment')}
+        onSelectAddress={(address) => {
+          setSelectedAddress(address);
+          setActiveScreen('payment');
+        }}
+        onAddNewRequest={() => setActiveScreen('add_address')}
+        currentAddressId={selectedAddress?.id}
+      />
+    );
+  }
+
+  if (activeScreen === 'add_address') {
+    return (
+      <AddAddressPage 
+        onBack={() => setActiveScreen('address_selection')}
+        onSuccess={() => {
+          // When address is successfully added, we switch back to selection and re-fetch the list
+          setActiveScreen('address_selection');
+          fetchAddress();
+        }}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,26 +135,25 @@ export default function PaymentPage({ onClose, totalAmount }: PaymentPageProps) 
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
-          <PaymentAddressSection />
+          <PaymentAddressSection 
+            address={selectedAddress} 
+            onPress={() => setActiveScreen('address_selection')} 
+          />
           
           <PaymentProductSection 
             insuranceSelected={insuranceSelected} 
-            setInsuranceSelected={setInsuranceSelected} 
+            setInsuranceSelected={setInsuranceSelected}
+            items={cartItems}
           />
           
           <PaymentShippingSection />
 
           <View style={styles.sectionBlock}>
             <View style={styles.subtotalRow}>
-              <Text style={styles.subtotalLabel}>Tổng số tiền (1 sản phẩm)</Text>
+              <Text style={styles.subtotalLabel}>Tổng số tiền ({totalQuantity || 0} sản phẩm)</Text>
               <Text style={styles.subtotalValue}>{finalTotal.toLocaleString('vi-VN')}đ</Text>
             </View>
           </View>
-
-          <PaymentShopeeVoucherSection 
-            useCoins={useCoins} 
-            setUseCoins={setUseCoins} 
-          />
 
           <PaymentMethodSection />
 
@@ -78,7 +170,8 @@ export default function PaymentPage({ onClose, totalAmount }: PaymentPageProps) 
         <PaymentBottomBar 
           finalTotal={finalTotal}
           savings={savings}
-          onOrderPress={onClose}
+          onOrderPress={handleVNPayCheckout}
+          loading={isProcessing}
         />
 
       </SafeAreaView>
