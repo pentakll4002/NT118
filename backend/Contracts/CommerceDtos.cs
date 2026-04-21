@@ -77,11 +77,23 @@ public record ApplyVoucherRequest(
     [property: Required, MaxLength(50)] string Code,
     [property: Range(typeof(decimal), "0.01", "999999999")] decimal OrderAmount);
 
-public record CreatePaymentRequest(
-    [property: Range(1, long.MaxValue)] long OrderId,
-    [property: Required, MaxLength(50)] string PaymentMethod,
-    [property: Range(typeof(decimal), "0.01", "999999999")] decimal Amount,
-    [property: Required, MinLength(3), MaxLength(10)] string Currency = "VND");
+public class CreatePaymentRequest
+{
+    [Range(1, long.MaxValue)]
+    public long OrderId { get; set; }
+
+    [Required]
+    [MaxLength(50)]
+    public string PaymentMethod { get; set; } = string.Empty;
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal Amount { get; set; }
+
+    [Required]
+    [MinLength(3)]
+    [MaxLength(10)]
+    public string Currency { get; set; } = "VND";
+}
 
 public record CreateShopRequest(
     [property: Required, MaxLength(100)] string Name,

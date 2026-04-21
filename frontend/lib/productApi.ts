@@ -34,7 +34,8 @@ export interface PaginatedResponse<T> {
 export interface ProductListParams {
   page?: number;
   pageSize?: number;
-  category?: number;
+  category?: number; // legacy (mapped to categoryId)
+  categoryId?: number;
   q?: string;
   brand?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'rating' | 'popular';
@@ -71,12 +72,22 @@ export function formatSold(sold: number): string {
  * Fetch paginated product list
  */
 export async function getProducts(params: ProductListParams = {}): Promise<PaginatedResponse<ProductDTO>> {
-  const res = await apiClient.get('/api/products', { params });
+  const { category, sort, ...rest } = params;
+  const queryParams: any = {
+    ...rest,
+    categoryId: params.categoryId ?? category,
+  };
+
+  if (sort === 'popular') queryParams.sort = 'sold';
+  else if (sort === 'newest') queryParams.sort = undefined;
+  else queryParams.sort = sort;
+
+  const res = await apiClient.get('/api/products', { params: queryParams });
   const payload = res.data?.data || res.data; // Catch C# wrapper { success, data: {...} }
 
   const mappedItems = (payload.items || payload.Items || []).map((x: any) => ({
     ...x,
-    image: x.mainImageUrl || x.image || x.Image || null
+    image: x.mainImageUrl || x.MainImageUrl || x.image || x.Image || null
   }));
 
   return {
@@ -96,10 +107,11 @@ export async function getProducts(params: ProductListParams = {}): Promise<Pagin
 export async function getProductById(id: number): Promise<ProductDTO> {
   const res = await apiClient.get(`/api/products/${id}`);
   const payload = res.data?.data || res.data;
+  const images = payload.images || payload.Images || [];
   return {
     ...payload,
     image: payload.mainImageUrl || payload.image || payload.Image || null,
-    thumbnails: payload.images?.map((i: any) => i.imageUrl) || []
+    thumbnails: Array.isArray(images) ? images.map((i: any) => i.imageUrl || i.ImageUrl).filter(Boolean) : []
   };
 }
 

@@ -1,5 +1,6 @@
 using Backend.Configuration;
 using System.Text;
+using System.Text.Json;
 using Backend.Data;
 using Backend.Filters;
 using Backend.Hubs;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Backend.Services.VNPay;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnvLoader.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
@@ -27,6 +29,7 @@ builder.Configuration["ConnectionStrings:DefaultConnection"] =
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<AppFeatureOptions>(builder.Configuration.GetSection(AppFeatureOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.Configure<VnpayConfiguration>(builder.Configuration.GetSection("VNPAY"));
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -97,6 +100,8 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<INotificationRealtimeService, NotificationRealtimeService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IVnpayClient, VnpayClient>();
 builder.Services.AddScoped<ApiExceptionFilter>();
 builder.Services.AddScoped<ApiResponseWrapperFilter>();
 builder.Services.AddSignalR();
@@ -209,8 +214,127 @@ using (var scope = app.Services.CreateScope())
             ADD COLUMN IF NOT EXISTS password_reset_code_expires TIMESTAMP;
     ");
 
-    // Create database if not exists
-    db.Database.EnsureCreated();
+    // Apply pending migrations (creates tables including addresses)
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Migration failed (DB may have been created with EnsureCreated): {ex.Message}");
+        db.Database.EnsureCreated();
+    }
+
+    // Ensure addresses table exists (fallback when DB was created before Address entity was added)
+    db.Database.ExecuteSqlRaw(@"
+        CREATE TABLE IF NOT EXISTS addresses (
+            code VARCHAR(20) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            name_en VARCHAR(255) NOT NULL DEFAULT '',
+            full_name VARCHAR(255) NOT NULL,
+            full_name_en VARCHAR(255) NOT NULL DEFAULT '',
+            code_name VARCHAR(255) NOT NULL DEFAULT '',
+            parent_code VARCHAR(20),
+            level INTEGER NOT NULL
+        );
+    ");
+
+    // Normalize legacy NULL values (e.g. inserted by seed_address.js) to avoid InvalidCastException
+    db.Database.ExecuteSqlRaw(@"
+        UPDATE addresses
+        SET
+            name_en = COALESCE(name_en, ''),
+            full_name_en = COALESCE(full_name_en, ''),
+            code_name = COALESCE(code_name, '')
+        WHERE name_en IS NULL OR full_name_en IS NULL OR code_name IS NULL;
+
+        ALTER TABLE addresses
+            ALTER COLUMN name_en SET DEFAULT '',
+            ALTER COLUMN full_name_en SET DEFAULT '',
+            ALTER COLUMN code_name SET DEFAULT '';
+    ");
+
+    // Seed address data if empty
+    try
+    {
+        if (!db.Addresses.Any())
+        {
+            var jsonPath = Path.Combine(builder.Environment.ContentRootPath, "data.json");
+            if (File.Exists(jsonPath))
+            {
+                var json = File.ReadAllText(jsonPath);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var batch = new List<Address>();
+                int count = 0;
+
+                foreach (var level1 in root.EnumerateArray())
+                {
+                    var code1 = level1.GetProperty("level1_id").GetString()!;
+                    var name1 = level1.GetProperty("name").GetString()!;
+                    batch.Add(new Address { Code = code1, Name = name1, FullName = name1, CodeName = Slugify(name1), ParentCode = null, Level = 1, NameEn = "", FullNameEn = "" });
+                    count++;
+
+                    if (level1.TryGetProperty("level2s", out var level2s))
+                    {
+                        foreach (var level2 in level2s.EnumerateArray())
+                        {
+                            var code2 = level2.GetProperty("level2_id").GetString()!;
+                            var name2 = level2.GetProperty("name").GetString()!;
+                            batch.Add(new Address { Code = code2, Name = name2, FullName = name2, CodeName = Slugify(name2), ParentCode = code1, Level = 2, NameEn = "", FullNameEn = "" });
+                            count++;
+
+                            if (level2.TryGetProperty("level3s", out var level3s))
+                            {
+                                foreach (var level3 in level3s.EnumerateArray())
+                                {
+                                    var code3 = level3.GetProperty("level3_id").GetString()!;
+                                    var name3 = level3.GetProperty("name").GetString()!;
+                                    batch.Add(new Address { Code = code3, Name = name3, FullName = name3, CodeName = Slugify(name3), ParentCode = code2, Level = 3, NameEn = "", FullNameEn = "" });
+                                    count++;
+
+                                    if (batch.Count >= 500)
+                                    {
+                                        db.Addresses.AddRange(batch);
+                                        db.SaveChanges();
+                                        batch.Clear();
+                                    }
+                                }
+                            }
+                            if (batch.Count >= 500)
+                            {
+                                db.Addresses.AddRange(batch);
+                                db.SaveChanges();
+                                batch.Clear();
+                            }
+                        }
+                    }
+                    if (batch.Count >= 500)
+                    {
+                        db.Addresses.AddRange(batch);
+                        db.SaveChanges();
+                        batch.Clear();
+                    }
+                }
+
+                if (batch.Count > 0)
+                {
+                    db.Addresses.AddRange(batch);
+                    db.SaveChanges();
+                }
+
+                Console.WriteLine($"Seeded {count} address rows from data.json");
+            }
+            else
+            {
+                Console.WriteLine("WARNING: data.json not found, address table is empty");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding address data: {ex.Message}");
+    }
 
     // Create wishlist tables if they don't exist
     db.Database.ExecuteSqlRaw(@"
@@ -254,3 +378,18 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run("http://0.0.0.0:5058");
+
+static string Slugify(string input)
+{
+    var s = (input ?? "").Trim().ToLowerInvariant();
+    s = s.Normalize(NormalizationForm.FormD);
+    var sb = new StringBuilder();
+    foreach (var c in s)
+    {
+        if (char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+        sb.Append(c);
+    }
+    s = sb.ToString().Replace('đ', 'd');
+    s = System.Text.RegularExpressions.Regex.Replace(s, "[^a-z0-9]+", "_");
+    return s.Trim('_');
+}
