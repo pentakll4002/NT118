@@ -54,8 +54,7 @@ const ProductListScreen: React.FC = () => {
     console.log('Edit product:', product.id);
   };
   const handleAddProduct = () => {
-    // TODO: navigate to create product screen
-    console.log('Add new product');
+    router.push('/seller-add-product' as any);
   };
 
   // ——— List header (Stats + Tabs) ———

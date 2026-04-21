@@ -19,5 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: nt118-backend
+    restart: unless-stopped
+    ports:
+      - "5058:5058"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=nt118-postgres;Port=5432;Database=nt118;Username=postgres;Password=postgres
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_ENABLE_SSL=true
+      - SMTP_FROM_EMAIL=hiroplayga@gmail.com
+      - SMTP_FROM_NAME=NT118 App
+      - SMTP_APP_PASSWORD=hemd yilb eyid qscu
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:

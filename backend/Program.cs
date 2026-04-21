@@ -142,6 +142,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+    // Create database if not exists
+    db.Database.EnsureCreated();
+
     // Create enums if they don't exist
     db.Database.ExecuteSqlRaw(@"
         DO $$ BEGIN
@@ -208,9 +211,6 @@ using (var scope = app.Services.CreateScope())
             ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(20),
             ADD COLUMN IF NOT EXISTS password_reset_code_expires TIMESTAMP;
     ");
-
-    // Create database if not exists
-    db.Database.EnsureCreated();
 
     // Create wishlist tables if they don't exist
     db.Database.ExecuteSqlRaw(@"

@@ -14,7 +14,7 @@ const BottomTabBar: React.FC = () => {
     { name: 'Sản phẩm', icon: 'cube-outline', route: '/seller-products' },
     { name: 'Đơn hàng', icon: 'receipt-outline', route: '/seller-orders' },
     { name: 'Chat', icon: 'chatbubbles-outline', route: '/chat' },
-    { name: 'Shop', icon: 'person-outline', route: '/(tabs)/settings' },
+    { name: 'Shop', icon: 'person-outline', route: '/seller-shop-profile' },
   ];
 
   return (

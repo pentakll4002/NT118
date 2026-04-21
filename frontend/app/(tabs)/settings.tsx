@@ -1,5 +1,5 @@
-import ProfilePage from '@/components/screen/ProfilePage';
+import BuyerAccountScreen from '@/components/screen/BuyerAccountScreen';
 
 export default function SettingsScreen() {
-  return <ProfilePage />;
+  return <BuyerAccountScreen />;
 }
