@@ -182,6 +182,10 @@ public class UserManagementService(AppDbContext db) : IUserManagementService
             District = request.District.Trim(),
             Ward = request.Ward.Trim(),
             StreetAddress = request.StreetAddress.Trim(),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            PoiName = NormalizeNullable(request.PoiName),
+            FormattedAddress = NormalizeNullable(request.FormattedAddress),
             IsDefault = shouldSetDefault,
             CreatedAt = DateTime.UtcNow,
         };
@@ -207,6 +211,10 @@ public class UserManagementService(AppDbContext db) : IUserManagementService
         entity.District = request.District.Trim();
         entity.Ward = request.Ward.Trim();
         entity.StreetAddress = request.StreetAddress.Trim();
+        entity.Latitude = request.Latitude;
+        entity.Longitude = request.Longitude;
+        entity.PoiName = NormalizeNullable(request.PoiName);
+        entity.FormattedAddress = NormalizeNullable(request.FormattedAddress);
         entity.IsDefault = request.IsDefault;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -270,6 +278,10 @@ public class UserManagementService(AppDbContext db) : IUserManagementService
         x.District,
         x.Ward,
         x.StreetAddress,
+        x.Latitude,
+        x.Longitude,
+        x.PoiName,
+        x.FormattedAddress,
         x.IsDefault,
         x.CreatedAt);
 
@@ -282,6 +294,10 @@ public class UserManagementService(AppDbContext db) : IUserManagementService
             x.District,
             x.Ward,
             x.StreetAddress,
+            x.Latitude,
+            x.Longitude,
+            x.PoiName,
+            x.FormattedAddress,
             x.IsDefault,
             x.CreatedAt);
 

@@ -33,16 +33,24 @@ public record UserAddressResponse(
     string District,
     string Ward,
     string StreetAddress,
+    double? Latitude,
+    double? Longitude,
+    string? PoiName,
+    string? FormattedAddress,
     bool IsDefault,
     DateTime CreatedAt);
 
 public record UpsertUserAddressRequest(
-    [property: Required, MaxLength(100)] string RecipientName,
-    [property: Required, MaxLength(20)] string RecipientPhone,
-    [property: Required, MaxLength(50)] string Province,
-    [property: Required, MaxLength(50)] string District,
-    [property: Required, MaxLength(50)] string Ward,
-    [property: Required, MaxLength(500)] string StreetAddress,
+    [param: Required, MaxLength(100)] string RecipientName,
+    [param: Required, MaxLength(20)] string RecipientPhone,
+    [param: Required, MaxLength(50)] string Province,
+    [param: Required, MaxLength(50)] string District,
+    [param: Required, MaxLength(50)] string Ward,
+    [param: Required, MaxLength(500)] string StreetAddress,
+    double? Latitude,
+    double? Longitude,
+    [param: MaxLength(200)] string? PoiName,
+    [param: MaxLength(500)] string? FormattedAddress,
     bool IsDefault);
 
 public record ChangePasswordRequest(

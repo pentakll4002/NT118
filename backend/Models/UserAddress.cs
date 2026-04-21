@@ -10,6 +10,10 @@ public class UserAddress
     public string District { get; set; } = string.Empty;
     public string Ward { get; set; } = string.Empty;
     public string StreetAddress { get; set; } = string.Empty;
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public string? PoiName { get; set; }
+    public string? FormattedAddress { get; set; }
     public bool IsDefault { get; set; }
     public DateTime CreatedAt { get; set; }
 

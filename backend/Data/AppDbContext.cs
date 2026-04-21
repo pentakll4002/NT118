@@ -29,9 +29,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<WishlistCollection> WishlistCollections => Set<WishlistCollection>();
     public DbSet<WishlistCollectionItem> WishlistCollectionItems => Set<WishlistCollectionItem>();
+    public DbSet<Address> Addresses => Set<Address>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Address>(e =>
+        {
+            e.ToTable("addresses");
+            e.HasKey(x => x.Code);
+            e.Property(x => x.Code).HasColumnName("code").HasMaxLength(20);
+            e.Property(x => x.Name).HasColumnName("name").HasMaxLength(255);
+            e.Property(x => x.NameEn).HasColumnName("name_en").HasMaxLength(255);
+            e.Property(x => x.FullName).HasColumnName("full_name").HasMaxLength(255);
+            e.Property(x => x.FullNameEn).HasColumnName("full_name_en").HasMaxLength(255);
+            e.Property(x => x.CodeName).HasColumnName("code_name").HasMaxLength(255);
+            e.Property(x => x.ParentCode).HasColumnName("parent_code").HasMaxLength(20);
+            e.Property(x => x.Level).HasColumnName("level");
+        });
         modelBuilder.Entity<User>(e =>
         {
             e.ToTable("users");
@@ -89,6 +103,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.District).HasColumnName("district").HasMaxLength(50).IsRequired();
             e.Property(x => x.Ward).HasColumnName("ward").HasMaxLength(50).IsRequired();
             e.Property(x => x.StreetAddress).HasColumnName("street_address").IsRequired();
+            e.Property(x => x.Latitude).HasColumnName("latitude");
+            e.Property(x => x.Longitude).HasColumnName("longitude");
+            e.Property(x => x.PoiName).HasColumnName("poi_name").HasMaxLength(200);
+            e.Property(x => x.FormattedAddress).HasColumnName("formatted_address").HasMaxLength(500);
             e.Property(x => x.IsDefault).HasColumnName("is_default");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
             e.HasIndex(x => x.UserId);
