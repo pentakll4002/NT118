@@ -1,33 +1,86 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const ProductImagesSection: React.FC = () => {
+interface ProductImagesSectionProps {
+  images: string[];
+  onImagesChange: (images: string[]) => void;
+}
+
+const ProductImagesSection: React.FC<ProductImagesSectionProps> = ({ images, onImagesChange }) => {
   const slots = Array.from({ length: 6 }, (_, index) => index);
+
+  const pickImage = async () => {
+    if (images.length >= 6) {
+      Alert.alert('Thông báo', 'Bạn chỉ có thể chọn tối đa 6 hình ảnh.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 6 - images.length,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const newUris = result.assets.map((asset) => asset.uri);
+      onImagesChange([...images, ...newUris]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...images];
+    newImages.splice(index, 1);
+    onImagesChange(newImages);
+  };
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionTitleRow}>
         <Text style={styles.sectionTitle}>Hình ảnh sản phẩm</Text>
-        <Text style={styles.sectionCount}>0 / 6</Text>
+        <Text style={styles.sectionCount}>{images.length} / 6</Text>
       </View>
       <Text style={styles.hintText}>Ảnh bìa nên rõ nét, nền sáng và thấy đầy đủ sản phẩm.</Text>
 
       <View style={styles.imageGrid}>
-        {slots.map((slotIndex) => (
-          <TouchableOpacity
-            key={slotIndex}
-            style={[styles.imageSlot, slotIndex === 0 ? styles.primaryImageSlot : null]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={slotIndex === 0 ? 'camera-outline' : 'image-outline'}
-              size={slotIndex === 0 ? 22 : 18}
-              color={slotIndex === 0 ? '#3498db' : '#c0c4cc'}
-            />
-            {slotIndex === 0 ? <Text style={styles.primaryImageText}>THÊM KHUNG ẢNH</Text> : null}
-          </TouchableOpacity>
-        ))}
+        {slots.map((slotIndex) => {
+          const hasImage = slotIndex < images.length;
+          const imageUri = hasImage ? images[slotIndex] : null;
+
+          return (
+            <TouchableOpacity
+              key={slotIndex}
+              style={[
+                styles.imageSlot,
+                slotIndex === 0 && !hasImage ? styles.primaryImageSlot : null,
+              ]}
+              activeOpacity={0.8}
+              onPress={hasImage ? undefined : pickImage}
+            >
+              {hasImage ? (
+                <View style={styles.imageWrapper}>
+                  <Image source={{ uri: imageUri! }} style={styles.pickedImage} />
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => removeImage(slotIndex)}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#f87171" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <Ionicons
+                    name={slotIndex === 0 ? 'camera-outline' : 'image-outline'}
+                    size={slotIndex === 0 ? 22 : 18}
+                    color={slotIndex === 0 ? '#3498db' : '#c0c4cc'}
+                  />
+                  {slotIndex === 0 ? <Text style={styles.primaryImageText}>THÊM KHUNG ẢNH</Text> : null}
+                </>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -86,6 +139,21 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: '100%',
+  },
+  pickedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#fff',
+    borderRadius: 10,
   },
 });
 

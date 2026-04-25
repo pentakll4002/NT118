@@ -38,6 +38,8 @@ const LoginScreen = () => {
       // Route based on user role returned from the API
       if (result.role === 'seller') {
         router.replace('/seller-dashboard' as any);
+      } else if (result.role === 'admin') {
+        router.replace('/dashboard' as any);
       } else {
         router.replace('/(tabs)');
       }

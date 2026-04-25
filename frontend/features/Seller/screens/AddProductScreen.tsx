@@ -19,6 +19,7 @@ const AddProductScreen: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   const keepDigitsOnly = (value: string) => value.replace(/\D/g, '');
   const formatNumber = (value: string) => {
@@ -140,7 +141,7 @@ const AddProductScreen: React.FC = () => {
       <AddProductHeader onBackPress={() => router.back()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <ProductImagesSection />
+        <ProductImagesSection images={images} onImagesChange={setImages} />
         <ProductDetailsSection
           name={name}
           description={description}

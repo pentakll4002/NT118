@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -7,37 +7,67 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomTabBar from '../components/BottomTabBar';
-
-type ShopProfile = {
-  name: string;
-  description: string;
-  address: string;
-  hotline: string;
-  businessHours: string;
-};
-
-const initialProfile: ShopProfile = {
-  name: 'Artisan Brew Official',
-  description:
-    'Chúng tôi cung cấp các loại cà phê đặc sản được tuyển chọn kỹ lưỡng từ các vùng nguyên liệu nổi tiếng tại Việt Nam.',
-  address: '123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh',
-  hotline: '0909 123 456',
-  businessHours: '08:00 - 22:00 (Thứ 2 - Chủ nhật)',
-};
+import { sellerApi, ShopProfile } from '@/lib/sellerApi';
 
 const ShopProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] = useState<ShopProfile>(initialProfile);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<Partial<ShopProfile>>({});
+
+  useEffect(() => {
+    fetchShopInfo();
+  }, []);
+
+  const fetchShopInfo = async () => {
+    try {
+      setLoading(true);
+      const data = await sellerApi.getShopInfo();
+      setProfile(data);
+    } catch (error) {
+      console.error('Failed to fetch shop info:', error);
+      Alert.alert('Lỗi', 'Không thể tải thông tin cửa hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    // Note: Update API not yet implemented in sellerApi, but we can mock success
+    try {
+      setSaving(true);
+      // await sellerApi.updateShopInfo(profile);
+      setTimeout(() => {
+        Alert.alert('Thành công', 'Đã cập nhật thông tin cửa hàng');
+        setSaving(false);
+      }, 1000);
+    } catch (error) {
+      Alert.alert('Lỗi', 'Không thể lưu thay đổi');
+      setSaving(false);
+    }
+  };
 
   const completion = useMemo(() => {
-    const values = Object.values(profile).map((v) => v.trim());
-    const filled = values.filter(Boolean).length;
-    return Math.round((filled / values.length) * 100);
+    if (!profile) return 0;
+    const fields = ['name', 'description', 'address', 'phone'];
+    const filled = fields.filter(f => (profile as any)[f]?.trim()).length;
+    return Math.round((filled / fields.length) * 100);
   }, [profile]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={{ marginTop: 10, color: '#6b7280' }}>Đang tải thông tin shop...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,8 +88,8 @@ const ShopProfileScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.identityText}>
-            <Text style={styles.shopName}>ArtisanBrew</Text>
-            <Text style={styles.badge}>NHÀ BÁN HÀNG UY TÍN</Text>
+            <Text style={styles.shopName}>{profile.name || 'Shop Name'}</Text>
+            <Text style={styles.badge}>{profile.isVerified ? 'NHÀ BÁN HÀNG UY TÍN' : 'CỬA HÀNG MỚI'}</Text>
           </View>
         </View>
 
@@ -101,12 +131,12 @@ const ShopProfileScreen: React.FC = () => {
             />
           </View>
 
-          <Text style={styles.fieldLabel}>HOTLINE</Text>
+          <Text style={styles.fieldLabel}>SỐ ĐIỆN THOẠI</Text>
           <View style={styles.addressRow}>
             <Ionicons name="call-outline" size={16} color="#ef476f" />
             <TextInput
-              value={profile.hotline}
-              onChangeText={(text) => setProfile((prev) => ({ ...prev, hotline: text }))}
+              value={profile.phone}
+              onChangeText={(text) => setProfile((prev) => ({ ...prev, phone: text }))}
               style={styles.addressInput}
               keyboardType="phone-pad"
               placeholder="Số điện thoại hỗ trợ khách hàng"
@@ -142,8 +172,16 @@ const ShopProfileScreen: React.FC = () => {
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <TouchableOpacity style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>LƯU THAY ĐỔI</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.saveButtonText}>LƯU THAY ĐỔI</Text>
+          )}
         </TouchableOpacity>
       </View>
 

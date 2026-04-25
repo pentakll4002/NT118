@@ -72,6 +72,26 @@ export interface SellerCategory {
   sortOrder: number;
 }
 
+export interface ShopProfile {
+  id: number;
+  ownerId: number;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  rating: number;
+  totalReviews: number;
+  totalProducts: number;
+  status: string;
+  isVerified: boolean;
+  businessHours?: string;
+  createdAt: string;
+}
+
 export const sellerApi = {
   getProducts: async (): Promise<SellerProduct[]> => {
     const response = await apiClient.get<SellerProduct[]>('/api/seller/products');
@@ -153,6 +173,34 @@ export const sellerApi = {
 
   getCategories: async (): Promise<SellerCategory[]> => {
     const response = await apiClient.get<SellerCategory[]>('/api/categories');
+    return response.data;
+  },
+
+  getShopInfo: async (): Promise<ShopProfile> => {
+    // --- MOCK DATA FALLBACK ---
+    const token = await getAuthToken();
+    if (token?.startsWith('mock-')) {
+      const [, , email] = token.split(':');
+      return {
+        id: 1,
+        ownerId: 999,
+        name: email ? `${email.split('@')[0]}'s Store` : 'My Demo Shop',
+        slug: 'my-demo-shop',
+        description: 'Đây là mô tả cửa hàng demo của bạn trên ShopeeLite.',
+        rating: 4.8,
+        totalReviews: 120,
+        totalProducts: 45,
+        status: 'active',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+        email: email || 'shop@test.com',
+        phone: '0987654321',
+        address: '123 Đường ABC, Quận 1, TP.HCM',
+        businessHours: '08:00 - 22:00 (Thứ 2 - Chủ nhật)',
+      };
+    }
+    // -------------------------
+    const response = await apiClient.get<ShopProfile>('/api/shops/mine');
     return response.data;
   },
 

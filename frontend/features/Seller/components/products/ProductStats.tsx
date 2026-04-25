@@ -25,30 +25,30 @@ const ProductStats: React.FC<ProductStatsProps> = ({
 }) => {
   const stats: StatItem[] = [
     {
-      label: 'Tổng sản phẩm',
+      label: 'Tất cả',
       value: totalProducts,
-      icon: 'cube-outline',
+      icon: 'cube',
       iconColor: '#3b82f6',
       iconBg: '#eff6ff',
     },
     {
       label: 'Đang bán',
       value: liveProducts,
-      icon: 'pricetag-outline',
+      icon: 'checkmark-circle',
       iconColor: '#10b981',
       iconBg: '#ecfdf5',
     },
     {
       label: 'Hết hàng',
       value: soldOutProducts,
-      icon: 'alert-circle-outline',
+      icon: 'close-circle',
       iconColor: '#ef4444',
       iconBg: '#fef2f2',
     },
     {
       label: 'Chờ duyệt',
       value: reviewingProducts,
-      icon: 'time-outline',
+      icon: 'time',
       iconColor: '#f59e0b',
       iconBg: '#fffbeb',
     },
@@ -58,12 +58,9 @@ const ProductStats: React.FC<ProductStatsProps> = ({
     <View style={styles.container}>
       <View style={styles.grid}>
         {stats.map((item, index) => (
-          <View key={index} style={styles.card}>
-            <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
-              <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
-            </View>
+          <View key={index} style={[styles.card, { borderLeftColor: item.iconColor }]}>
             <Text style={styles.value}>{item.value}</Text>
-            <Text style={styles.label}>{item.label}</Text>
+            <Text style={styles.label} numberOfLines={1}>{item.label}</Text>
           </View>
         ))}
       </View>
@@ -73,52 +70,43 @@ const ProductStats: React.FC<ProductStatsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 16,
     paddingBottom: 8,
   },
   grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    gap: 8,
   },
   card: {
-    width: '48%',
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#f1f5f9',
-    // shadow iOS
+    borderLeftWidth: 3,
+    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    // elevation Android
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
     elevation: 1,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   value: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1e293b',
     marginBottom: 2,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
-    textAlign: 'center',
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
   },
 });
 

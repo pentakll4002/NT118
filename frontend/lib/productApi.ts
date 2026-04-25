@@ -177,7 +177,22 @@ export async function getFeaturedProducts(limit: number = 10): Promise<ProductDT
  */
 export async function getViewHistory(limit: number = 20): Promise<ViewHistoryItemDTO[]> {
   if (USE_MOCK) {
-    return []; // No mock history for now
+    return [
+      {
+        productId: 1,
+        productName: 'Sản phẩm mẫu 1',
+        productSlug: 'san-pham-mau-1',
+        mainImageUrl: 'https://via.placeholder.com/150',
+        viewedAt: new Date().toISOString(),
+      },
+      {
+        productId: 2,
+        productName: 'Sản phẩm mẫu 2',
+        productSlug: 'san-pham-mau-2',
+        mainImageUrl: 'https://via.placeholder.com/150',
+        viewedAt: new Date(Date.now() - 3600000).toISOString(),
+      }
+    ];
   }
   const res = await apiClient.get('/api/products/history', { params: { limit } });
   return res.data?.data || res.data || [];

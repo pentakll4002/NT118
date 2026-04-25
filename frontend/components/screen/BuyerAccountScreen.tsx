@@ -5,8 +5,24 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { clearAuthToken } from '../../lib/authToken';
 
+import { userApi, UserProfileDTO } from '../../lib/userApi';
+
 const BuyerAccountScreen: React.FC = () => {
   const router = useRouter();
+  const [profile, setProfile] = React.useState<UserProfileDTO | null>(null);
+
+  React.useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const data = await userApi.getProfile();
+      setProfile(data);
+    } catch (error) {
+      console.error('Failed to fetch profile in account screen:', error);
+    }
+  };
 
   const orderActions = [
     { key: 'confirm', icon: 'clipboard-check-outline', label: 'Chờ xác nhận', color: '#3b82f6', bg: '#eff6ff', status: 'pending' },
@@ -90,13 +106,25 @@ const BuyerAccountScreen: React.FC = () => {
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/seller-dashboard' as any)}>
-            <View style={styles.menuLeft}>
-              <MaterialCommunityIcons name="storefront-outline" size={20} color="#ef476f" />
-              <Text style={styles.menuText}>Kênh người bán</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
-          </TouchableOpacity>
+          {(profile?.role === 'seller' || profile?.role === 'admin') && (
+            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/seller-dashboard' as any)}>
+              <View style={styles.menuLeft}>
+                <MaterialCommunityIcons name="storefront-outline" size={20} color="#ef476f" />
+                <Text style={styles.menuText}>Kênh người bán</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
+
+          {profile?.role === 'admin' && (
+            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/dashboard' as any)}>
+              <View style={styles.menuLeft}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#4392F9" />
+                <Text style={styles.menuText}>Quản lý hệ thống (Admin)</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>

@@ -33,18 +33,6 @@ const Sparkline: React.FC<{ data: number[] }> = ({ data }) => {
 };
 
 const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, loading = false }) => {
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.03, duration: 850, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 850, useNativeDriver: true }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [pulse]);
-
   if (loading) {
     return (
       <View style={styles.section}>
@@ -99,15 +87,12 @@ const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, loading = fa
 
       <View style={styles.grid}>
         {cards.map((card) => (
-          <Animated.View
-            key={card.id}
-            style={[styles.card, card.emphasize ? { transform: [{ scale: pulse }] } : null]}
-          >
+          <View key={card.id} style={styles.card}>
             <Text style={styles.cardTitle}>{card.title}</Text>
             <Text style={styles.cardValue}>{card.value}</Text>
             <Text style={styles.cardDescription}>{card.description}</Text>
             {card.id === 'revenue' ? <Sparkline data={stats?.revenueHistory ?? []} /> : null}
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>

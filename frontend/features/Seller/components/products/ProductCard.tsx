@@ -30,6 +30,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onMore }) => {
+  const [showActions, setShowActions] = React.useState(false);
   const badge = statusColor[product.status];
 
   return (
@@ -72,13 +73,30 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onMore }) =>
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.editButton} onPress={() => onEdit?.(product)}>
-            <Text style={styles.editText}>EDIT</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => onMore?.(product)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="ellipsis-horizontal" size={20} color="#95a5a6" />
-          </TouchableOpacity>
+          {!showActions ? (
+            <>
+              <TouchableOpacity style={styles.editButton} onPress={() => onEdit?.(product)}>
+                <Text style={styles.editText}>EDIT</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowActions(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="ellipsis-horizontal" size={20} color="#95a5a6" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.expandedActions}>
+              <View style={styles.actionGroup}>
+                <TouchableOpacity style={styles.hideButton} onPress={() => { setShowActions(false); /* onHide?.(product) */ }}>
+                  <Text style={styles.hideText}>TẠM ẨN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteButton} onPress={() => { setShowActions(false); /* onDelete?.(product) */ }}>
+                  <Text style={styles.deleteText}>XOÁ</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setShowActions(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={20} color="#95a5a6" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -159,6 +177,16 @@ const styles = StyleSheet.create({
     borderTopColor: '#f5f5f5',
     paddingTop: 10,
   },
+  expandedActions: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   editButton: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -171,6 +199,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2c3e50',
     letterSpacing: 0.5,
+  },
+  hideButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  hideText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6c757d',
+  },
+  deleteButton: {
+    backgroundColor: '#fff5f5',
+    borderWidth: 1,
+    borderColor: '#ffe3e3',
+    borderRadius: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  deleteText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fa5252',
   },
 });
 
