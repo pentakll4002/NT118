@@ -58,6 +58,7 @@ export interface ProductListParams {
   pageSize?: number;
   category?: number; // legacy (mapped to categoryId)
   categoryId?: number;
+  shopId?: number;
   q?: string;
   brand?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'rating' | 'popular';
@@ -129,18 +130,19 @@ export async function getProducts(params: ProductListParams = {}): Promise<Pagin
   const res = await apiClient.get('/api/products', { params: queryParams });
   const payload = res.data?.data || res.data; // Catch C# wrapper { success, data: {...} }
 
-  const mappedItems = (payload.items || payload.Items || []).map((x: any) => ({
+  const rawItems = payload?.items || payload?.Items || payload?.data || [];
+  const mappedItems = Array.isArray(rawItems) ? rawItems.map((x: any) => ({
     ...x,
     image: x.mainImageUrl || x.MainImageUrl || x.image || x.Image || null
-  }));
+  })) : [];
 
   return {
     data: mappedItems,
     pagination: {
-      page: payload.page || payload.Page || 1,
-      pageSize: payload.pageSize || payload.PageSize || 20,
-      total: payload.totalItems || payload.totalCount || payload.TotalCount || 0,
-      totalPages: Math.ceil((payload.totalItems || payload.totalCount || 1) / (payload.pageSize || 20))
+      page: payload?.page || payload?.Page || 1,
+      pageSize: payload?.pageSize || payload?.PageSize || 20,
+      total: payload?.totalItems || payload?.totalCount || payload?.TotalCount || 0,
+      totalPages: Math.ceil((payload?.totalItems || payload?.totalCount || 1) / (payload?.pageSize || 20))
     }
   };
 }

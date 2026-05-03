@@ -12,12 +12,13 @@ interface OrderSuccessPageProps {
   isPendingPayment?: boolean; // For VNPay waiting, or COD (success)
   cartItems?: CheckoutCartItem[];
   finalTotal?: number;
+  paymentUrl?: string;
 }
 
 const { width } = Dimensions.get('window');
 const PRODUCT_WIDTH = (width - 48) / 2;
 
-export default function OrderSuccessPage({ isPendingPayment = false, cartItems = [], finalTotal = 0 }: OrderSuccessPageProps) {
+export default function OrderSuccessPage({ isPendingPayment = false, cartItems = [], finalTotal = 0, paymentUrl }: OrderSuccessPageProps) {
   const [recommendedProducts, setRecommendedProducts] = React.useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = React.useState(true);
   const router = useRouter();
@@ -68,6 +69,14 @@ export default function OrderSuccessPage({ isPendingPayment = false, cartItems =
             </Text>
           </View>
           
+          {isPendingPayment && paymentUrl && (
+            <View style={styles.qrContainer}>
+              <Text style={styles.qrInstruction}>Quét mã QR bằng ứng dụng ngân hàng để thanh toán</Text>
+              <Image source={{ uri: paymentUrl }} style={styles.qrImage} resizeMode="contain" />
+              <Text style={styles.qrWarning}>Lưu ý: Không thay đổi số tiền và nội dung chuyển khoản</Text>
+            </View>
+          )}
+
           {/* Order Details (Replaces warning text) */}
           <View style={styles.orderDetailsContainer}>
             <Text style={styles.orderDetailsTitle}>Chi tiết đơn hàng</Text>
@@ -192,6 +201,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
+  },
+  qrContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  qrInstruction: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  qrImage: {
+    width: 250,
+    height: 300,
+    marginBottom: 12,
+  },
+  qrWarning: {
+    fontSize: 12,
+    color: '#F83758',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   orderDetailsTitle: {
     fontSize: 14,

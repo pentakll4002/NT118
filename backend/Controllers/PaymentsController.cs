@@ -1,8 +1,8 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Backend.Contracts;
 using Backend.Data;
 using Backend.Models;
-using Backend.Services.VNPay;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +12,7 @@ namespace Backend.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/payments")]
-public class PaymentsController(AppDbContext db, IVnpayClient vnpayClient, ILogger<PaymentsController> logger) : ControllerBase
+public class PaymentsController(AppDbContext db, IConfiguration configuration, ILogger<PaymentsController> logger) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentRequest body, CancellationToken cancellationToken)
@@ -32,7 +32,7 @@ public class PaymentsController(AppDbContext db, IVnpayClient vnpayClient, ILogg
             Amount = body.Amount,
             Currency = body.Currency,
             Status = PaymentStatus.pending,
-            PaymentData = JsonSerializer.Serialize(new { source = "manual", createdBy = userId }),
+            PaymentData = JsonDocument.Parse(JsonSerializer.Serialize(new { source = "manual", createdBy = userId })),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -75,13 +75,13 @@ public class PaymentsController(AppDbContext db, IVnpayClient vnpayClient, ILogg
         });
     }
 
-    [HttpPost("vnpay/create")]
-    public async Task<IActionResult> CreateVnPayPayment([FromBody] CreatePaymentRequest body, CancellationToken cancellationToken)
+    [HttpPost("vietqr/create")]
+    public async Task<IActionResult> CreateVietQrPayment([FromBody] CreatePaymentRequest body, CancellationToken cancellationToken)
     {
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        logger.LogInformation("CreateVnPayPayment called. OrderId: {OrderId}, UserId: {UserId}", body.OrderId, userId);
+        logger.LogInformation("CreateVietQrPayment called. OrderId: {OrderId}, UserId: {UserId}", body.OrderId, userId);
 
         var order = await db.Orders.FirstOrDefaultAsync(x => x.Id == body.OrderId && x.BuyerId == userId, cancellationToken);
         if (order is null && body.OrderId != 1)
@@ -97,12 +97,12 @@ public class PaymentsController(AppDbContext db, IVnpayClient vnpayClient, ILogg
             payment = new Payment
             {
                 OrderId = body.OrderId,
-                PaymentMethod = "vnpay",
-                TransactionId = $"VNP-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                PaymentMethod = "vietqr",
+                TransactionId = $"VQR-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
                 Amount = body.Amount,
                 Currency = body.Currency,
                 Status = PaymentStatus.pending,
-                PaymentData = JsonSerializer.Serialize(new { source = "vnpay", createdBy = userId }),
+                PaymentData = JsonDocument.Parse(JsonSerializer.Serialize(new { source = "vietqr", createdBy = userId })),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };
@@ -124,100 +124,173 @@ public class PaymentsController(AppDbContext db, IVnpayClient vnpayClient, ILogg
 
         try
         {
-            long paymentId = payment?.Id ?? (DateTime.UtcNow.Ticks % 10000000000); // 10 digits
-            string transactionId = payment?.TransactionId ?? $"VNP-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+            long paymentId = payment?.Id ?? (DateTime.UtcNow.Ticks % 10000000000);
+            string transactionId = payment?.TransactionId ?? $"VQR-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
 
-            var request = new VnpayPaymentRequest
-            {
-                PaymentId = paymentId, 
-                Money = (double)body.Amount,
-                Description = $"Thanh toan don hang {body.OrderId}",
-                BankCode = BankCode.ANY
-            };
+            var bankId = configuration["VietQR:BankId"] ?? "MB";
+            var accountNo = configuration["VietQR:AccountNo"] ?? "123456789";
+            var accountName = configuration["VietQR:AccountName"] ?? "NGUYEN VAN A";
+            var template = configuration["VietQR:Template"] ?? "compact";
 
-            var paymentUrlInfo = vnpayClient.CreatePaymentUrl(request);
+            var amount = body.Amount;
+            var content = $"ORDER_{body.OrderId}";
+            var encodedAccountName = Uri.EscapeDataString(accountName);
+
+            var paymentUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={content}&accountName={encodedAccountName}";
             
-            logger.LogInformation("Created VNPay URL successfully.");
+            // --- MOCK PAYMENT AFTER 30 SECONDS ---
+            var scopeFactory = HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    using var scope = scopeFactory.CreateScope();
+                    var dbCtx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var orderToUpdate = await dbCtx.Orders.FirstOrDefaultAsync(x => x.Id == body.OrderId);
+                    
+                    if (orderToUpdate != null && orderToUpdate.PaymentStatus == PaymentStatus.pending)
+                    {
+                        orderToUpdate.PaymentStatus = PaymentStatus.paid;
+                        orderToUpdate.Status = OrderStatus.confirmed;
+                        orderToUpdate.UpdatedAt = DateTime.UtcNow;
+
+                        var paymentToUpdate = await dbCtx.Payments
+                            .Where(x => x.OrderId == body.OrderId && x.Status == PaymentStatus.pending && x.PaymentMethod == "vietqr")
+                            .OrderByDescending(x => x.CreatedAt)
+                            .FirstOrDefaultAsync();
+
+                        if (paymentToUpdate != null)
+                        {
+                            paymentToUpdate.Status = PaymentStatus.paid;
+                            paymentToUpdate.UpdatedAt = DateTime.UtcNow;
+                            paymentToUpdate.PaymentData = JsonDocument.Parse(JsonSerializer.Serialize(new
+                            {
+                                source = "vietqr_mock_success",
+                                message = "Auto-paid after 30s for testing",
+                                transferDate = DateTime.UtcNow.ToString("O")
+                            }));
+                        }
+
+                        await dbCtx.SaveChangesAsync();
+                        
+                        var bgLogger = scope.ServiceProvider.GetRequiredService<ILogger<PaymentsController>>();
+                        bgLogger.LogInformation("MOCK: Tự động thanh toán thành công đơn hàng {OrderId} sau 30s.", body.OrderId);
+                    }
+                }
+                catch
+                {
+                    // Ignore background mock error
+                }
+            });
+            // ------------------------------------
+
+            logger.LogInformation("Created VietQR URL successfully.");
             return Ok(new { 
                 txnRef = transactionId, 
-                paymentUrl = paymentUrlInfo.Url,
-                paymentId = paymentId
+                paymentUrl = paymentUrl,
+                paymentId = paymentId,
+                bankId,
+                accountNo,
+                accountName,
+                content,
+                amount
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating VNPay payment URL");
+            logger.LogError(ex, "Error creating VietQR payment URL");
             return BadRequest(new { message = ex.Message });
         }
     }
 
     [AllowAnonymous]
-    [HttpGet("vnpay/callback")]
-    public async Task<IActionResult> VnPayCallback(CancellationToken cancellationToken)
+    [HttpPost("sepay/webhook")]
+    public async Task<IActionResult> SePayWebhook([FromBody] SePayWebhookRequest payload, CancellationToken cancellationToken)
     {
         try
         {
-            var result = vnpayClient.GetPaymentResult(Request);
-            
-            // result.PaymentId is our Internal Payment ID (txnRef sent to VNPay)
-            var payment = await db.Payments.FirstOrDefaultAsync(x => x.Id == result.PaymentId, cancellationToken);
-            if (payment is null)
+            logger.LogInformation("Received SEPay Webhook: {Content}", JsonSerializer.Serialize(payload));
+
+            var amount = payload.GetAmount();
+            var content = payload.Content ?? "";
+
+            // Lấy ra orderId từ content
+            // Format mong muốn: ORDER_{id}
+            var match = Regex.Match(content, @"ORDER_(\d+)", RegexOptions.IgnoreCase);
+            if (!match.Success)
             {
-                logger.LogWarning("VNPay Callback: Payment ID {PaymentId} not found", result.PaymentId);
-                return NotFound(new { message = "Không tìm thấy giao dịch." });
+                logger.LogWarning("SEPay Webhook: Không tìm thấy order ID trong nội dung: {Content}", content);
+                return Ok(new { success = true, message = "Ignored (No Order ID)" });
             }
 
-            if (payment.Status == PaymentStatus.paid)
-                return Ok(new { message = "Giao dịch đã được xử lý trước đó.", status = "paid" });
-
-            payment.Status = PaymentStatus.paid;
-            payment.UpdatedAt = DateTime.UtcNow;
-            payment.PaymentData = JsonSerializer.Serialize(new
+            if (!long.TryParse(match.Groups[1].Value, out var orderId))
             {
-                vnpayTransactionId = result.VnpayTransactionId,
-                bankCode = result.BankingInfor?.BankCode,
-                bankTranNo = result.BankingInfor?.BankTransactionId,
-                cardType = result.CardType,
-                payDate = result.Timestamp
-            });
+                logger.LogWarning("SEPay Webhook: Order ID không hợp lệ: {Content}", content);
+                return Ok(new { success = true, message = "Ignored (Invalid Order ID)" });
+            }
 
-            var order = await db.Orders.FirstOrDefaultAsync(x => x.Id == payment.OrderId, cancellationToken);
-            if (order is not null)
+            var order = await db.Orders.FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken);
+            if (order is null)
             {
-                order.PaymentStatus = PaymentStatus.paid;
-                order.Status = OrderStatus.confirmed; // Auto confirm if paid
-                order.UpdatedAt = DateTime.UtcNow;
+                logger.LogWarning("SEPay Webhook: Đơn hàng không tồn tại. OrderId: {OrderId}", orderId);
+                return Ok(new { success = true, message = "Ignored (Order not found)" });
+            }
+
+            // 1. Amount (số tiền) check
+            if (order.TotalAmount != amount)
+            {
+                logger.LogWarning("SEPay Webhook: Số tiền không khớp. OrderId: {OrderId}, Expected: {Expected}, Actual: {Actual}", orderId, order.TotalAmount, amount);
+                return Ok(new { success = true, message = "Ignored (Amount mismatch)" });
+            }
+
+            // 3. Idempotent check
+            if (order.PaymentStatus == PaymentStatus.paid)
+            {
+                logger.LogInformation("SEPay Webhook: Đơn hàng đã được thanh toán. OrderId: {OrderId}", orderId);
+                return Ok(new { success = true, message = "Success (Already paid)" });
+            }
+
+            if (order.Status != OrderStatus.pending)
+            {
+                 logger.LogWarning("SEPay Webhook: Trạng thái đơn hàng không hợp lệ: {Status}", order.Status);
+                 return Ok(new { success = true, message = "Ignored (Order not pending)" });
+            }
+
+            // Cập nhật trạng thái
+            order.PaymentStatus = PaymentStatus.paid;
+            order.Status = OrderStatus.confirmed;
+            order.UpdatedAt = DateTime.UtcNow;
+
+            // Tìm Payment record (nếu có) và cập nhật
+            var payment = await db.Payments
+                .Where(x => x.OrderId == orderId && x.Status == PaymentStatus.pending && x.PaymentMethod == "vietqr")
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (payment != null)
+            {
+                payment.Status = PaymentStatus.paid;
+                payment.UpdatedAt = DateTime.UtcNow;
+                payment.PaymentData = JsonDocument.Parse(JsonSerializer.Serialize(new
+                {
+                    sepayTransactionId = payload.Id,
+                    gateway = payload.Gateway,
+                    accountNumber = payload.GetAccountNumber(),
+                    transferDate = payload.TransactionDate,
+                    content = payload.Content
+                }));
             }
 
             await db.SaveChangesAsync(cancellationToken);
-            
-            // Redirect to mobile app or show success message
-            // For now, return JSON. In a real app, we might redirect to a deep link.
-            return Ok(new { message = "Thanh toán thành công.", status = "paid" });
-        }
-        catch (VnpayException ex)
-        {
-            logger.LogError(ex, "VNPay Callback Error: {Message}", ex.Message);
-            
-            // If we can identify the payment, mark it as failed
-            // Note: txnRef is usually in the query params even if it fails
-            if (long.TryParse(Request.Query["vnp_TxnRef"], out var paymentId))
-            {
-                var payment = await db.Payments.FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
-                if (payment != null && payment.Status == PaymentStatus.pending)
-                {
-                    payment.Status = PaymentStatus.failed;
-                    payment.UpdatedAt = DateTime.UtcNow;
-                    await db.SaveChangesAsync(cancellationToken);
-                }
-            }
 
-            return BadRequest(new { message = ex.Message, status = "failed" });
+            logger.LogInformation("SEPay Webhook: Xử lý thành công đơn hàng: {OrderId}", orderId);
+            return Ok(new { success = true, message = "Xử lý thành công" });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "General error in VNPay Callback");
-            return BadRequest(new { message = "Lỗi xử lý callback thanh toán." });
+            logger.LogError(ex, "Error processing SEPay Webhook");
+            return StatusCode(500, new { success = false, message = "Lỗi hệ thống khi xử lý webhook" });
         }
     }
 }

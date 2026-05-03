@@ -39,16 +39,19 @@ const ShopProfileScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // Note: Update API not yet implemented in sellerApi, but we can mock success
     try {
       setSaving(true);
-      // await sellerApi.updateShopInfo(profile);
-      setTimeout(() => {
-        Alert.alert('Thành công', 'Đã cập nhật thông tin cửa hàng');
-        setSaving(false);
-      }, 1000);
-    } catch (error) {
-      Alert.alert('Lỗi', 'Không thể lưu thay đổi');
+      await sellerApi.updateShopProfile({
+        name: profile.name,
+        description: profile.description,
+        address: profile.address,
+        phone: profile.phone,
+        email: profile.email,
+      });
+      Alert.alert('Thành công', 'Đã cập nhật thông tin cửa hàng');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể lưu thay đổi');
+    } finally {
       setSaving(false);
     }
   };
@@ -92,6 +95,17 @@ const ShopProfileScreen: React.FC = () => {
             <Text style={styles.badge}>{profile.isVerified ? 'NHÀ BÁN HÀNG UY TÍN' : 'CỬA HÀNG MỚI'}</Text>
           </View>
         </View>
+
+        {/* Pending approval banner */}
+        {profile.status === 'pending' && (
+          <View style={styles.pendingBanner}>
+            <Ionicons name="time-outline" size={18} color="#92400e" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.pendingTitle}>Đang chờ duyệt</Text>
+              <Text style={styles.pendingSubtitle}>Cửa hàng của bạn đang được admin xem xét. Thời gian duyệt thường 1–3 ngày làm việc.</Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.progressCard}>
           <Text style={styles.progressLabel}>Mức độ hoàn thiện hồ sơ</Text>
@@ -270,6 +284,28 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '800',
     color: '#1f2937',
+  },
+  pendingBanner: {
+    margin: 14,
+    marginTop: 12,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 10,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  pendingTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  pendingSubtitle: {
+    fontSize: 12,
+    color: '#92400e',
+    marginTop: 2,
+    lineHeight: 17,
   },
   badge: {
     marginTop: 2,

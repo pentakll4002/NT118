@@ -1,5 +1,4 @@
 import { apiClient } from './apiClient';
-import { getAuthToken } from './authToken';
 
 export interface SellerTodoStats {
   ordersToShip: number;
@@ -37,6 +36,50 @@ export interface SellerOrder {
   status: string;
   orderedAt: string;
   updatedAt?: string;
+}
+
+export interface SellerOrderDetail {
+  order: {
+    id: number;
+    orderNumber: string;
+    buyerId: number;
+    shopId: number;
+    shippingAddressId: number;
+    subtotal: number;
+    shippingFee: number;
+    discountAmount: number;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentStatus: string;
+    status: string;
+    notes: string | null;
+    orderedAt: string;
+    updatedAt: string;
+  };
+  items: Array<{
+    id: number;
+    productId: number;
+    variantId: number | null;
+    productName: string;
+    productImage: string | null;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+  buyer: {
+    id: number;
+    username: string;
+    email: string;
+    phone: string | null;
+  } | null;
+  shippingAddress: {
+    recipientName: string;
+    recipientPhone: string;
+    province: string;
+    district: string;
+    ward: string;
+    streetAddress: string;
+  } | null;
 }
 
 export interface SellerRevenue {
@@ -92,6 +135,16 @@ export interface ShopProfile {
   createdAt: string;
 }
 
+export interface UpdateShopProfilePayload {
+  name?: string;
+  description?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
 export const sellerApi = {
   getProducts: async (): Promise<SellerProduct[]> => {
     const response = await apiClient.get<SellerProduct[]>('/api/seller/products');
@@ -99,82 +152,24 @@ export const sellerApi = {
   },
 
   getOrders: async (): Promise<SellerOrder[]> => {
-    const token = await getAuthToken();
-    if (token?.startsWith('mock-')) {
-      const now = new Date();
-      const toIso = (offsetHours: number) => new Date(now.getTime() - offsetHours * 60 * 60 * 1000).toISOString();
-      return [
-        {
-          id: 1001,
-          orderNumber: 'SPX-240101',
-          buyerId: 12,
-          totalAmount: 1240000,
-          paymentStatus: 'pending',
-          status: 'pending',
-          orderedAt: toIso(2),
-          updatedAt: toIso(2),
-        },
-        {
-          id: 1002,
-          orderNumber: 'SPX-240102',
-          buyerId: 28,
-          totalAmount: 850000,
-          paymentStatus: 'paid',
-          status: 'confirmed',
-          orderedAt: toIso(6),
-          updatedAt: toIso(5),
-        },
-        {
-          id: 1003,
-          orderNumber: 'SPX-240103',
-          buyerId: 35,
-          totalAmount: 2490000,
-          paymentStatus: 'paid',
-          status: 'shipping',
-          orderedAt: toIso(20),
-          updatedAt: toIso(18),
-        },
-        {
-          id: 1004,
-          orderNumber: 'SPX-240104',
-          buyerId: 44,
-          totalAmount: 520000,
-          paymentStatus: 'paid',
-          status: 'delivered',
-          orderedAt: toIso(30),
-          updatedAt: toIso(12),
-        },
-        {
-          id: 1005,
-          orderNumber: 'SPX-240105',
-          buyerId: 50,
-          totalAmount: 1890000,
-          paymentStatus: 'refunded',
-          status: 'refunded',
-          orderedAt: toIso(56),
-          updatedAt: toIso(8),
-        },
-      ];
-    }
-
     const response = await apiClient.get<SellerOrder[]>('/api/seller/orders');
     return response.data;
   },
 
+  getOrderDetail: async (orderId: number): Promise<SellerOrderDetail> => {
+    const response = await apiClient.get<SellerOrderDetail>(`/api/seller/orders/${orderId}`);
+    return response.data;
+  },
+
+  updateOrderStatus: async (orderId: number, status: string, note?: string): Promise<{ message: string }> => {
+    const response = await apiClient.patch<{ message: string }>(`/api/seller/orders/${orderId}/status`, {
+      status,
+      note,
+    });
+    return response.data;
+  },
+
   getRevenue: async (): Promise<SellerRevenue> => {
-    const token = await getAuthToken();
-    if (token?.startsWith('mock-')) {
-      return {
-        totalRevenue: 85240000,
-        monthly: [
-          { year: 2026, month: 1, revenue: 12500000 },
-          { year: 2026, month: 2, revenue: 15800000 },
-          { year: 2026, month: 3, revenue: 11200000 },
-          { year: 2026, month: 4, revenue: 19400000 },
-          { year: 2026, month: 5, revenue: 26340000 },
-        ]
-      };
-    }
     const response = await apiClient.get<SellerRevenue>('/api/seller/revenue');
     return response.data;
   },
@@ -190,30 +185,12 @@ export const sellerApi = {
   },
 
   getShopInfo: async (): Promise<ShopProfile> => {
-    // --- MOCK DATA FALLBACK ---
-    const token = await getAuthToken();
-    if (token?.startsWith('mock-')) {
-      const [, , email] = token.split(':');
-      return {
-        id: 1,
-        ownerId: 999,
-        name: email ? `${email.split('@')[0]}'s Store` : 'My Demo Shop',
-        slug: 'my-demo-shop',
-        description: 'Đây là mô tả cửa hàng demo của bạn trên ShopeeLite.',
-        rating: 4.8,
-        totalReviews: 120,
-        totalProducts: 45,
-        status: 'active',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        email: email || 'shop@test.com',
-        phone: '0987654321',
-        address: '123 Đường ABC, Quận 1, TP.HCM',
-        businessHours: '08:00 - 22:00 (Thứ 2 - Chủ nhật)',
-      };
-    }
-    // -------------------------
     const response = await apiClient.get<ShopProfile>('/api/shops/mine');
+    return response.data;
+  },
+
+  updateShopProfile: async (data: UpdateShopProfilePayload): Promise<{ message: string }> => {
+    const response = await apiClient.patch<{ message: string }>('/api/shops/mine', data);
     return response.data;
   },
 
@@ -229,25 +206,6 @@ export const sellerApi = {
       ...input,
       averageOrderValue: input.todayOrders > 0 ? input.todayRevenue / input.todayOrders : 0,
     });
-
-    // --- MOCK DATA FALLBACK (For Frontend Only Testing) ---
-    const token = await getAuthToken();
-    if (token?.startsWith('mock-')) {
-      return buildStats({
-        shopName: "Shop NT118 (Demo Mode)",
-        todayRevenue: 12500000,
-        todayOrders: 12,
-        conversionRate: 4.8,
-        todo: {
-          ordersToShip: 5,
-          cancelledOrders: 2,
-          returnRequests: 1,
-          outOfStockProducts: 4
-        },
-        revenueHistory: [1200000, 1500000, 1100000, 1800000, 2200000, 1900000, 1250000],
-      });
-    }
-    // -----------------------------------------------------
 
     const [products, orders] = await Promise.all([
       sellerApi.getProducts(),

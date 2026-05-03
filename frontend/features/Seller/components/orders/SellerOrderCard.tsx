@@ -26,7 +26,10 @@ const SellerOrderCard: React.FC<SellerOrderCardProps> = ({ order }) => {
         <Text style={styles.shipText}>Đặt lúc: {formatOrderTime(order.orderedAt)}</Text>
       </View>
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.primaryButton}>
+        <TouchableOpacity 
+          style={styles.primaryButton}
+          onPress={() => router.push(`/seller-order-detail?id=${order.id}` as any)}
+        >
           <Text style={styles.primaryButtonText}>{primaryActionText}</Text>
         </TouchableOpacity>
         <TouchableOpacity

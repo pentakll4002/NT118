@@ -29,8 +29,9 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<UserAddressType | null>(null);
   const [cartItems, setCartItems] = useState<CheckoutCartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vnpay'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vietqr'>('cod');
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [paymentUrl, setPaymentUrl] = useState<string | undefined>(undefined);
   const [editingAddressId, setEditingAddressId] = useState<number | undefined>(undefined);
 
   const fetchAddress = async () => {
@@ -134,22 +135,19 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
         // order successful
         setActiveScreen('success');
       } else {
-        const response = await apiClient.post('/api/payments/vnpay/create', {
+        const response = await apiClient.post('/api/payments/vietqr/create', {
           amount: realTotalAmount,
           orderId: realOrderId,
           currency: "VND",
-          paymentMethod: "vnpay"
+          paymentMethod: "vietqr"
         });
         
-        const vnpayPayload = response.data?.data || response.data;
-        if (vnpayPayload && vnpayPayload.paymentUrl) {
+        const vietqrPayload = response.data?.data || response.data;
+        if (vietqrPayload && vietqrPayload.paymentUrl) {
+          setPaymentUrl(vietqrPayload.paymentUrl);
           setActiveScreen('success'); 
-          await Linking.openURL(vnpayPayload.paymentUrl);
-          // We intentionally do not close the stack here so that when the user 
-          // returns from the browser or bank app, they are greeted with the 
-          // 'Waiting for payment' ("Đang chờ thanh toán") screen.
         } else {
-          throw new Error("Không thể lấy URL thanh toán từ server.");
+          throw new Error("Không thể lấy QR thanh toán từ server.");
         }
       }
     } catch (error: any) {
@@ -202,9 +200,10 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   if (activeScreen === 'success') {
     return (
       <OrderSuccessPage 
-        isPendingPayment={paymentMethod === 'vnpay'}
+        isPendingPayment={paymentMethod === 'vietqr'}
         cartItems={cartItems}
         finalTotal={finalTotal}
+        paymentUrl={paymentUrl}
       />
     );
   }

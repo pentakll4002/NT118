@@ -96,7 +96,6 @@ export function useNotificationSignalR(onNotification?: (n: BackendNotification)
   }, []);
 }
 
-// ── Shared notification state hook ──────────────────────────────────
 let globalUnreadCount = 0;
 const unreadListeners = new Set<(count: number) => void>();
 

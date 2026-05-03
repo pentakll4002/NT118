@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProductCard from '../common/ProductCard';
-import { getShopById, getShopProducts, toggleFollowShop, getFollowStatus } from '../../lib/shopApi';
+import { getShopById, getShopProducts, toggleFollowShop, getFollowStatus, ShopDetailResponse } from '../../lib/shopApi';
 import { ShopDTO } from '../../lib/mockData';
 import { ProductDTO, formatPriceFull, formatSold } from '../../lib/productApi';
 import { toggleFavorite } from '../../lib/wishlistApi';
@@ -15,7 +15,7 @@ interface ShopPageProps { shopId: number; }
 
 const ShopPage: React.FC<ShopPageProps> = ({ shopId = 1 }) => {
   const router = useRouter();
-  const [shop, setShop] = useState<ShopDTO | null>(null);
+  const [shop, setShop] = useState<ShopDetailResponse | null>(null);
   const [products, setProducts] = useState<ProductDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -211,7 +211,10 @@ const ShopPage: React.FC<ShopPageProps> = ({ shopId = 1 }) => {
             <View style={styles.statDivider} />
             <View style={styles.statItem}><Text style={styles.statValue}>{shop.totalProducts}</Text><Text style={styles.statLabel}> Sản phẩm</Text></View>
             <View style={styles.statDivider} />
-            <View style={styles.statItem}><Text style={styles.statValue}>95%</Text><Text style={styles.statLabel}> Phản hồi</Text></View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{shop.followerCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Người theo dõi</Text>
+            </View>
           </View>
         </View>
 

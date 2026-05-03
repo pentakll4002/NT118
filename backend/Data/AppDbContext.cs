@@ -146,6 +146,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Address).HasColumnName("address");
             e.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(20);
             e.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
+            e.Property(x => x.BusinessHours).HasColumnName("business_hours").HasMaxLength(200);
+            e.Property(x => x.Type).HasColumnName("type").HasMaxLength(20)
+                .HasConversion(v => v.ToString(), v => Enum.Parse<ShopType>(v));
             e.Property(x => x.Rating).HasColumnName("rating");
             e.Property(x => x.TotalReviews).HasColumnName("total_reviews");
             e.Property(x => x.TotalProducts).HasColumnName("total_products");
@@ -470,6 +473,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Data).HasColumnName("data").HasColumnType("jsonb");
             e.Property(x => x.IsRead).HasColumnName("is_read");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<Payment>(e =>
+        {
+            e.ToTable("payments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.OrderId).HasColumnName("order_id");
+            e.Property(x => x.PaymentMethod).HasColumnName("payment_method");
+            e.Property(x => x.TransactionId).HasColumnName("transaction_id");
+            e.Property(x => x.Amount).HasColumnName("amount");
+            e.Property(x => x.Currency).HasColumnName("currency");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.PaymentData).HasColumnName("payment_data").HasColumnType("jsonb");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

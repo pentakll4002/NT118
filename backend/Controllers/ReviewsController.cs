@@ -20,11 +20,21 @@ public class ReviewsController(AppDbContext db) : ControllerBase
         if (body.Rating is < 1 or > 5)
             return BadRequest(new { message = "Rating phải từ 1 đến 5." });
 
-        var hasOrder = await db.Orders.AnyAsync(
+        var order = await db.Orders.FirstOrDefaultAsync(
             x => x.Id == body.OrderId && x.BuyerId == userId,
             cancellationToken);
-        if (!hasOrder)
+        if (order is null)
             return BadRequest(new { message = "Đơn hàng không hợp lệ." });
+
+        if (order.Status != OrderStatus.delivered)
+            return BadRequest(new { message = "Chỉ có thể đánh giá sản phẩm khi đơn hàng đã giao thành công." });
+
+        // Verify the product was actually in this order
+        var hasProduct = await db.OrderItems.AnyAsync(
+            x => x.OrderId == body.OrderId && x.ProductId == id,
+            cancellationToken);
+        if (!hasProduct)
+            return BadRequest(new { message = "Sản phẩm không có trong đơn hàng này." });
 
         var exists = await db.Reviews.AnyAsync(
             x => x.OrderId == body.OrderId && x.ProductId == id && x.ReviewerId == userId,

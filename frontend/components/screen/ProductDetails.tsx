@@ -8,6 +8,7 @@ import { getProductReviews } from '../../lib/reviewApi';
 import { ProductReviewItemResponse, ShopDTO } from '../../lib/mockData';
 import { getShopById } from '../../lib/shopApi';
 import { addToCart } from '../../lib/cartApi';
+import { getMyOrders, getOrderDetail } from '../../lib/orderApi';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +30,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [isLightboxVisible, setIsLightboxVisible] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<number | 'all'>('all');
+  const [deliveredOrderId, setDeliveredOrderId] = useState<number | null>(null);
   
   // Selection Modal states
   const [isSelectionModalVisible, setIsSelectionModalVisible] = useState(false);
@@ -90,6 +92,21 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
       } finally {
         setReviewsLoading(false);
       }
+
+      // Check if user has a delivered order containing this product
+      try {
+        const myOrders = await getMyOrders();
+        const deliveredOrders = myOrders.filter(o => o.status === 'delivered');
+        for (const o of deliveredOrders) {
+          try {
+            const detail = await getOrderDetail(o.id);
+            if (detail.items.some(item => item.productId === productId)) {
+              setDeliveredOrderId(o.id);
+              break;
+            }
+          } catch { /* skip */ }
+        }
+      } catch { /* user not logged in or no orders */ }
     } catch (err) {
       console.log('Failed to load product:', err);
     } finally {
@@ -423,13 +440,20 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
               </View>
               <Text style={styles.totalReviewsText}>{product.totalReviews} đánh giá</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.writeReviewButton}
-              onPress={() => router.push({ pathname: '/write-review', params: { productId } })}
-            >
-              <Feather name="edit-3" size={16} color="#F83758" />
-              <Text style={styles.writeReviewText}>Viết đánh giá</Text>
-            </TouchableOpacity>
+            {deliveredOrderId ? (
+              <TouchableOpacity 
+                style={styles.writeReviewButton}
+                onPress={() => router.push({ pathname: '/write-review', params: { productId, orderId: deliveredOrderId } })}
+              >
+                <Feather name="edit-3" size={16} color="#F83758" />
+                <Text style={styles.writeReviewText}>Viết đánh giá</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.writeReviewButton, { opacity: 0.4 }]}>
+                <Feather name="edit-3" size={16} color="#999" />
+                <Text style={[styles.writeReviewText, { color: '#999' }]}>Mua để đánh giá</Text>
+              </View>
+            )}
           </View>
 
           {reviewsLoading ? (

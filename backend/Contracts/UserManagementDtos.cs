@@ -13,17 +13,30 @@ public record UserProfileResponse(
     DateOnly? DateOfBirth,
     GenderType? Gender,
     string? Bio,
+    string Role,
     DateTime CreatedAt,
     DateTime UpdatedAt);
 
-public record UpdateUserProfileRequest(
-    [property: Required, EmailAddress, MaxLength(100)] string Email,
-    [property: MaxLength(20)] string? Phone,
-    [property: MaxLength(100)] string? FullName,
-    [property: MaxLength(500)] string? AvatarUrl,
-    DateOnly? DateOfBirth,
-    GenderType? Gender,
-    string? Bio);
+public class UpdateUserProfileRequest
+{
+    [Required, EmailAddress, MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [MaxLength(100)]
+    public string? FullName { get; set; }
+
+    [MaxLength(500)]
+    public string? AvatarUrl { get; set; }
+
+    public DateOnly? DateOfBirth { get; set; }
+    public GenderType? Gender { get; set; }
+
+    [MaxLength(2000)]
+    public string? Bio { get; set; }
+}
 
 public record UserAddressResponse(
     long Id,
@@ -73,9 +86,14 @@ public class UpsertUserAddressRequest
     public bool IsDefault { get; set; }
 }
 
-public record ChangePasswordRequest(
-    [property: Required, MinLength(6), MaxLength(128)] string CurrentPassword,
-    [property: Required, MinLength(6), MaxLength(128)] string NewPassword);
+public class ChangePasswordRequest
+{
+    [Required, MinLength(6), MaxLength(128)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, MinLength(6), MaxLength(128)]
+    public string NewPassword { get; set; } = string.Empty;
+}
 
 public record UserOrderItemResponse(
     long Id,

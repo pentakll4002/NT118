@@ -113,7 +113,7 @@ export async function getMyOrders(): Promise<OrderDetail[]> {
 }
 
 export async function updateOrderStatus(orderId: number, status: OrderStatus): Promise<void> {
-  await apiClient.post(`/api/orders/${orderId}/status`, { status });
+  await apiClient.patch(`/api/orders/${orderId}/status`, { status });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export function formatPaymentStatus(status: string): string {
 export function formatPaymentMethod(method: string): string {
   const map: Record<string, string> = {
     cod: 'Thanh toán khi nhận hàng (COD)',
-    vnpay: 'VNPay',
+    vietqr: 'VietQR',
   };
   return map[method.toLowerCase()] || method;
 }
