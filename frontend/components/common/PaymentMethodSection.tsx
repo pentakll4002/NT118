@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface PaymentMethodSectionProps {
-  selectedMethod: 'cod' | 'vnpay';
-  onSelectMethod: (method: 'cod' | 'vnpay') => void;
+  selectedMethod: 'cod' | 'vietqr';
+  onSelectMethod: (method: 'cod' | 'vietqr') => void;
 }
 
 export default function PaymentMethodSection({ selectedMethod, onSelectMethod }: PaymentMethodSectionProps) {
@@ -26,24 +26,24 @@ export default function PaymentMethodSection({ selectedMethod, onSelectMethod }:
         />
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.paymentMethodRow} onPress={() => onSelectMethod('vnpay')}>
+      <TouchableOpacity style={styles.paymentMethodRow} onPress={() => onSelectMethod('vietqr')}>
         <View style={styles.paymentMethodLeft}>
-          <MaterialCommunityIcons name="credit-card-outline" size={24} color={selectedMethod === 'vnpay' ? "#F83758" : "#888"} />
-          <Text style={styles.paymentMethodName}>  VNPay (Ví điện tử / Thẻ ATM)</Text>
+          <MaterialCommunityIcons name="qrcode-scan" size={24} color={selectedMethod === 'vietqr' ? "#F83758" : "#888"} />
+          <Text style={styles.paymentMethodName}>  Thanh toán qua mã VietQR</Text>
         </View>
         <MaterialCommunityIcons 
-          name={selectedMethod === 'vnpay' ? "check-circle" : "checkbox-blank-circle-outline"} 
+          name={selectedMethod === 'vietqr' ? "check-circle" : "checkbox-blank-circle-outline"} 
           size={24} 
-          color={selectedMethod === 'vnpay' ? "#F83758" : "#888"} 
+          color={selectedMethod === 'vietqr' ? "#F83758" : "#888"} 
         />
       </TouchableOpacity>
 
-      {selectedMethod === 'vnpay' && (
+      {selectedMethod === 'vietqr' && (
         <View style={styles.paymentChild}>
            <View style={styles.spayBalanceRow}>
              <View style={styles.spayBalanceCol}>
-               <Text style={styles.vnpayDesc}>Thanh toán an toàn qua cổng VNPay.</Text>
-               <Text style={styles.spayDiscount}>Mở app ngân hàng để quét mã QR</Text>
+               <Text style={styles.vnpayDesc}>Hỗ trợ chuyển khoản qua mọi ngân hàng.</Text>
+               <Text style={styles.spayDiscount}>Mã QR sẽ hiển thị sau khi đặt hàng</Text>
              </View>
            </View>
         </View>

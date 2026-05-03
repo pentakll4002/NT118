@@ -20,28 +20,59 @@ public class UpdateCartItemRequest
     public int Quantity { get; set; }
 }
 
-public record CreateReviewRequest(
-    [property: Range(1, long.MaxValue)] long OrderId,
-    [property: Range(1, 5)] int Rating,
-    [property: MaxLength(2000)] string? Comment);
+public class CreateReviewRequest
+{
+    [Range(1, long.MaxValue)]
+    public long OrderId { get; set; }
 
-public record CreateCategoryRequest(
-    [property: Required, MaxLength(100)] string Name,
-    [property: Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")] string Slug,
-    [property: MaxLength(1000)] string? Description,
-    long? ParentId,
-    [property: MaxLength(500)] string? ImageUrl,
-    int SortOrder = 0,
-    CategoryStatus Status = CategoryStatus.active);
+    [Range(1, 5)]
+    public int Rating { get; set; }
 
-public record UpdateCategoryRequest(
-    [property: Required, MaxLength(100)] string Name,
-    [property: Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")] string Slug,
-    [property: MaxLength(1000)] string? Description,
-    long? ParentId,
-    [property: MaxLength(500)] string? ImageUrl,
-    int SortOrder = 0,
-    CategoryStatus Status = CategoryStatus.active);
+    [MaxLength(2000)]
+    public string? Comment { get; set; }
+}
+
+public class CreateCategoryRequest
+{
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    public long? ParentId { get; set; }
+
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
+
+    public int SortOrder { get; set; } = 0;
+
+    public CategoryStatus Status { get; set; } = CategoryStatus.active;
+}
+
+public class UpdateCategoryRequest
+{
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    public long? ParentId { get; set; }
+
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
+
+    public int SortOrder { get; set; } = 0;
+
+    public CategoryStatus Status { get; set; } = CategoryStatus.active;
+}
 
 public class CreateOrderItemRequest
 {
@@ -72,36 +103,65 @@ public class CreateOrderRequest
     public string? VoucherCode { get; set; }
 }
 
-public record UpdateOrderStatusRequest(OrderStatus Status);
+public class UpdateOrderStatusRequest
+{
+    [Required]
+    public OrderStatus Status { get; set; }
+}
 
-public record CreateVoucherRequest(
-    [property: Required, MaxLength(50), RegularExpression("^[A-Z0-9_-]+$")] string Code,
-    [property: Required, MaxLength(255)] string Name,
-    [property: MaxLength(1000)] string? Description,
-    VoucherDiscountType DiscountType,
-    [property: Range(typeof(decimal), "0.01", "999999999")] decimal DiscountValue,
-    decimal? MinOrderValue,
-    decimal? MaxDiscount,
-    int? UsageLimit,
-    DateTime StartDate,
-    DateTime EndDate,
-    bool IsActive = true);
+public class CreateVoucherRequest
+{
+    [Required, MaxLength(50), RegularExpression("^[A-Z0-9_-]+$")]
+    public string Code { get; set; } = string.Empty;
 
-public record UpdateVoucherRequest(
-    [property: Required, MaxLength(255)] string Name,
-    [property: MaxLength(1000)] string? Description,
-    VoucherDiscountType DiscountType,
-    [property: Range(typeof(decimal), "0.01", "999999999")] decimal DiscountValue,
-    decimal? MinOrderValue,
-    decimal? MaxDiscount,
-    int? UsageLimit,
-    DateTime StartDate,
-    DateTime EndDate,
-    bool IsActive = true);
+    [Required, MaxLength(255)]
+    public string Name { get; set; } = string.Empty;
 
-public record ApplyVoucherRequest(
-    [property: Required, MaxLength(50)] string Code,
-    [property: Range(typeof(decimal), "0.01", "999999999")] decimal OrderAmount);
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    public VoucherDiscountType DiscountType { get; set; }
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal DiscountValue { get; set; }
+
+    public decimal? MinOrderValue { get; set; }
+    public decimal? MaxDiscount { get; set; }
+    public int? UsageLimit { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class UpdateVoucherRequest
+{
+    [Required, MaxLength(255)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    public VoucherDiscountType DiscountType { get; set; }
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal DiscountValue { get; set; }
+
+    public decimal? MinOrderValue { get; set; }
+    public decimal? MaxDiscount { get; set; }
+    public int? UsageLimit { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class ApplyVoucherRequest
+{
+    [Required, MaxLength(50)]
+    public string Code { get; set; } = string.Empty;
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal OrderAmount { get; set; }
+}
 
 public class CreatePaymentRequest
 {
@@ -121,22 +181,47 @@ public class CreatePaymentRequest
     public string Currency { get; set; } = "VND";
 }
 
-public record CreateShopRequest(
-    [property: Required, MaxLength(100)] string Name,
-    [property: Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")] string Slug,
-    [property: MaxLength(2000)] string? Description,
-    [property: MaxLength(500)] string? LogoUrl,
-    [property: MaxLength(500)] string? CoverImageUrl,
-    [property: MaxLength(500)] string? Address,
-    [property: MaxLength(20)] string? Phone,
-    [property: EmailAddress, MaxLength(100)] string? Email);
+public class CreateShopRequest
+{
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
 
-public record SendMessageRequest(
-    [property: Range(1, long.MaxValue)] long ReceiverId,
-    [property: MaxLength(4000)] string? Content,
-    long? OrderId,
-    [property: MaxLength(500)] string? AttachmentUrl,
-    MessageType MessageType = MessageType.text);
+    [Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    [MaxLength(500)]
+    public string? LogoUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? CoverImageUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? Address { get; set; }
+
+    [MaxLength(100)]
+    public string? Province { get; set; }
+
+    [MaxLength(100)]
+    public string? District { get; set; }
+
+    [MaxLength(100)]
+    public string? Ward { get; set; }
+
+    [MaxLength(300)]
+    public string? StreetAddress { get; set; }
+
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [EmailAddress, MaxLength(100)]
+    public string? Email { get; set; }
+}
 
 public record CreateSellerProductRequest(
     [property: Range(1, long.MaxValue)] long CategoryId,
@@ -163,3 +248,98 @@ public record ShopResponse(
 
 public record FollowStatusResponse(bool IsFollowing, DateTime? FollowedAt);
 
+public class SendMessageRequest
+{
+    [Range(1, long.MaxValue)]
+    public long ReceiverId { get; set; }
+
+    [MaxLength(4000)]
+    public string? Content { get; set; }
+
+    public long? OrderId { get; set; }
+
+    [MaxLength(500)]
+    public string? AttachmentUrl { get; set; }
+
+    public MessageType MessageType { get; set; } = MessageType.text;
+}
+
+public class UpdateShopRequest
+{
+    [MaxLength(100)]
+    public string? Name { get; set; }
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    [MaxLength(500)]
+    public string? LogoUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? CoverImageUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? Address { get; set; }
+
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [EmailAddress, MaxLength(100)]
+    public string? Email { get; set; }
+
+    [MaxLength(200)]
+    public string? BusinessHours { get; set; }
+}
+
+public class UpdateSellerOrderStatusRequest
+{
+    [Required]
+    public OrderStatus Status { get; set; }
+
+    [MaxLength(500)]
+    public string? Note { get; set; }
+}
+
+public class RejectShopRequest
+{
+    [MaxLength(1000)]
+    public string? Reason { get; set; }
+}
+
+public class SetVerifiedRequest
+{
+    public bool IsVerified { get; set; }
+}
+
+public class CreateBusinessShopRequest
+{
+    [Required]
+    public long OwnerId { get; set; }
+
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, MaxLength(100), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    [MaxLength(500)]
+    public string? LogoUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? CoverImageUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? Address { get; set; }
+
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [EmailAddress, MaxLength(100)]
+    public string? Email { get; set; }
+
+    [MaxLength(200)]
+    public string? BusinessHours { get; set; }
+}

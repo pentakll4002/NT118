@@ -63,6 +63,20 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="shops"
+        options={{
+          title: 'Cửa hàng',
+          tabBarIcon: ({ color, size }) => <Ionicons name="storefront-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: 'Thành viên',
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="categories"
         options={{
           title: 'Danh mục',
@@ -72,27 +86,14 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="vouchers"
         options={{
-          title: 'Voucher',
-          tabBarIcon: ({ color, size }) => <Ionicons name="ticket-outline" size={size} color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Thiết lập',
+          title: 'Cài đặt',
           tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="users"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="shops"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

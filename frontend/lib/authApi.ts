@@ -30,23 +30,6 @@ function extractMessage(err: unknown): string {
 export async function loginRequest(email: string, password: string): Promise<AuthResponse> {
   const lowerEmail = email.trim().toLowerCase();
 
-  // --- MOCK LOGIN BYPASS (Frontend Only Testing) ---
-  if (lowerEmail === 'seller@test.com' || lowerEmail === 'buyer@test.com' || lowerEmail === 'admin@test.com') {
-    let mockRole: 'seller' | 'buyer' | 'admin' = 'buyer';
-    if (lowerEmail.includes('seller')) mockRole = 'seller';
-    else if (lowerEmail.includes('admin')) mockRole = 'admin';
-
-    const mockData: AuthResponse = {
-      token: `mock-token:${mockRole}:${lowerEmail}`,
-      userId: 999,
-      email: lowerEmail,
-      role: mockRole,
-    };
-    await saveAuthToken(mockData.token);
-    return mockData;
-  }
-  // ------------------------------------------------
-
   try {
     const { data } = await apiClient.post<AuthResponse>('/api/auth/login', {
       email: lowerEmail,

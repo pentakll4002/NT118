@@ -1,9 +1,8 @@
 import { apiClient } from './apiClient';
-import { MOCK_SHOPS, ShopDTO } from './mockData';
+import { ShopDTO, MOCK_SHOPS } from './mockData';
 import { ProductDTO, getProducts } from './productApi';
 
 const USE_MOCK = true;
-
 export interface CreateShopRequest {
   name: string;
   slug: string;
@@ -11,19 +10,27 @@ export interface CreateShopRequest {
   logoUrl?: string;
   coverImageUrl?: string;
   address?: string;
+  province?: string;
+  district?: string;
+  ward?: string;
+  streetAddress?: string;
+  latitude?: number;
+  longitude?: number;
   phone?: string;
   email?: string;
 }
 
+export interface ShopDetailResponse extends ShopDTO {
+  followerCount: number;
+  isFollowing: boolean;
+  updatedAt?: string;
+  status?: string;
+}
 
 /**
  * Fetch shop details by ID
  */
-export async function getShopById(id: number): Promise<ShopDTO | null> {
-  if (USE_MOCK) {
-    return MOCK_SHOPS.find(s => s.id === id) || MOCK_SHOPS[0];
-  }
-
+export async function getShopById(id: number): Promise<ShopDetailResponse | null> {
   try {
     const res = await apiClient.get(`/api/shops/${id}`);
     return res.data;
@@ -36,16 +43,10 @@ export async function getShopById(id: number): Promise<ShopDTO | null> {
 /**
  * Fetch products belonging to a shop
  */
-export async function getShopProducts(shopId: number): Promise<ProductDTO[]> {
-  if (USE_MOCK) {
-    // Return all mock products for now, or filter if we add shopId to ProductDTO
-    return (await getProducts()).data;
-  }
-
+export async function getShopProducts(shopId: number, page = 1, pageSize = 20): Promise<ProductDTO[]> {
   try {
-    // Note: Backend might need to support filtering by shopId in GetProducts
-    const res = await apiClient.get('/api/products', { params: { shopId } });
-    return res.data?.items || [];
+    const res = await getProducts({ shopId, page, pageSize });
+    return res.data;
   } catch (err) {
     console.error('Failed to fetch shop products:', err);
     return [];
@@ -56,10 +57,6 @@ export async function getShopProducts(shopId: number): Promise<ProductDTO[]> {
  * Follow or unfollow a shop
  */
 export async function toggleFollowShop(shopId: number, isFollowing: boolean): Promise<boolean> {
-  if (USE_MOCK) {
-    return true;
-  }
-
   try {
     if (isFollowing) {
       await apiClient.delete(`/api/shops/${shopId}/follow`);
@@ -76,13 +73,45 @@ export async function toggleFollowShop(shopId: number, isFollowing: boolean): Pr
 /**
  * Register a new shop
  */
-export async function registerShop(data: CreateShopRequest): Promise<{ id: number; name: string }> {
+export async function registerShop(data: CreateShopRequest): Promise<{ id: number; name: string; message?: string }> {
   try {
     const res = await apiClient.post('/api/shops/register', data);
     return res.data;
   } catch (err: any) {
-    console.error('Failed to register shop:', err);
-    throw new Error(err.message || 'Đăng ký shop thất bại.');
+    const msg = err?.response?.data?.message || err.message || 'Đăng ký shop thất bại.';
+    console.error('Failed to register shop:', msg);
+    throw new Error(msg);
+  }
+}
+
+/**
+ * Upload an image file to the backend
+ */
+export async function uploadImage(fileUri: string): Promise<string> {
+  try {
+    const formData = new FormData();
+    const filename = fileUri.split('/').pop() || 'upload.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+    
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type,
+    } as any);
+
+    const res = await apiClient.post('/api/upload/image', formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    // ApiResponseWrapperFilter wraps response in { data: { url: ... }, success: true }
+    return res.data?.data?.url || res.data?.url;
+  } catch (err: any) {
+    console.error('Failed to upload image:', err);
+    throw new Error(err?.response?.data?.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
   }
 }
 

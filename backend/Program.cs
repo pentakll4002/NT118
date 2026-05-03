@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Backend.Services.VNPay;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnvLoader.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
@@ -29,7 +28,7 @@ builder.Configuration["ConnectionStrings:DefaultConnection"] =
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<AppFeatureOptions>(builder.Configuration.GetSection(AppFeatureOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
-builder.Services.Configure<VnpayConfiguration>(builder.Configuration.GetSection("VNPAY"));
+
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -101,7 +100,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<INotificationRealtimeService, NotificationRealtimeService>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IVnpayClient, VnpayClient>();
+
 builder.Services.AddScoped<ApiExceptionFilter>();
 builder.Services.AddScoped<ApiResponseWrapperFilter>();
 builder.Services.AddSignalR();
@@ -172,7 +171,14 @@ using (var scope = app.Services.CreateScope())
         END $$;
 
         DO $$ BEGIN
-            CREATE TYPE shop_status AS ENUM ('active', 'inactive', 'suspended');
+            CREATE TYPE shop_status AS ENUM ('pending', 'active', 'inactive', 'suspended');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        -- Ensure 'pending' value exists in shop_status enum (for existing databases)
+        DO $$ BEGIN
+            ALTER TYPE shop_status ADD VALUE IF NOT EXISTS 'pending' BEFORE 'active';
         EXCEPTION
             WHEN duplicate_object THEN null;
         END $$;
@@ -345,6 +351,57 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"Error seeding address data: {ex.Message}");
     }
 
+    // ── Seed admin account ──────────────────────────────────────
+    try
+    {
+        var adminEmail = "admin@shopeelite.com";
+        if (!db.Users.Any(u => u.Email == adminEmail))
+        {
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+            var now = DateTime.UtcNow;
+            var adminUser = new User
+            {
+                Email = adminEmail,
+                Username = "admin",
+                Role = UserRole.admin,
+                Status = UserStatus.active,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            adminUser.PasswordHash = hasher.HashPassword(adminUser, "Admin@123456");
+            db.Users.Add(adminUser);
+            db.SaveChanges();
+
+            // Create profile for admin
+            db.UserProfiles.Add(new UserProfile
+            {
+                UserId = adminUser.Id,
+                FullName = "System Admin",
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+            db.SaveChanges();
+
+            Console.WriteLine($"✅ Admin account seeded: {adminEmail} / Admin@123456");
+        }
+        else
+        {
+            // Ensure existing admin has the admin role
+            var existingAdmin = db.Users.FirstOrDefault(u => u.Email == adminEmail);
+            if (existingAdmin != null && existingAdmin.Role != UserRole.admin)
+            {
+                existingAdmin.Role = UserRole.admin;
+                existingAdmin.UpdatedAt = DateTime.UtcNow;
+                db.SaveChanges();
+                Console.WriteLine($"✅ Existing user {adminEmail} promoted to admin.");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding admin: {ex.Message}");
+    }
+
 
     // Create wishlist tables if they don't exist
     db.Database.ExecuteSqlRaw(@"
@@ -377,6 +434,7 @@ using (var scope = app.Services.CreateScope())
     ");
 }
 
+app.UseStaticFiles();
 app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI();

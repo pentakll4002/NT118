@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { adminApi, AdminStatsDTO, AdminUserDTO, AdminShopDTO } from '@/lib/adminApi';
+import { adminApi, AdminStatsDTO, AdminUserDTO, AdminShopDTO, PendingShopDTO } from '@/lib/adminApi';
 
 export function useAdminDashboard() {
   const [stats, setStats] = useState<AdminStatsDTO | null>(null);
   const [users, setUsers] = useState<AdminUserDTO[]>([]);
   const [shops, setShops] = useState<AdminShopDTO[]>([]);
+  const [pendingShops, setPendingShops] = useState<PendingShopDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,14 +13,16 @@ export function useAdminDashboard() {
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const [statsData, usersData, shopsData] = await Promise.all([
+      const [statsData, usersData, shopsData, pendingData] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers(),
         adminApi.getShops(),
+        adminApi.getPendingShops().catch(() => []),
       ]);
       setStats(statsData);
-      setUsers(usersData);
-      setShops(shopsData);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setShops(Array.isArray(shopsData) ? shopsData : []);
+      setPendingShops(Array.isArray(pendingData) ? pendingData : []);
     } catch (err: any) {
       setError(err.message || 'Không thể tải dữ liệu admin');
     } finally {
@@ -41,6 +44,7 @@ export function useAdminDashboard() {
     stats,
     users,
     shops,
+    pendingShops,
     loading,
     refreshing,
     error,

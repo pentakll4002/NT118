@@ -26,8 +26,8 @@ public class Payment
     [Column("status")]
     public PaymentStatus Status { get; set; } = PaymentStatus.pending;
 
-    [Column("payment_data")]
-    public string? PaymentData { get; set; }
+    [Column("payment_data", TypeName = "jsonb")]
+    public System.Text.Json.JsonDocument? PaymentData { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

@@ -271,6 +271,7 @@ public class UserManagementService(AppDbContext db) : IUserManagementService
         profile?.DateOfBirth,
         profile?.Gender,
         profile?.Bio,
+        user.Role.ToString(),
         user.CreatedAt,
         user.UpdatedAt);
 

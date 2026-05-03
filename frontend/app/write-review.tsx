@@ -5,8 +5,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createReview } from '../lib/reviewApi';
 
 const WriteReviewScreen = () => {
-  const { productId: productIdRaw } = useLocalSearchParams<{ productId: string }>();
+  const { productId: productIdRaw, orderId: orderIdRaw } = useLocalSearchParams<{ productId: string; orderId: string }>();
   const productId = parseInt(productIdRaw, 10);
+  const orderId = parseInt(orderIdRaw, 10);
   const router = useRouter();
   
   const [rating, setRating] = useState(0);
@@ -19,10 +20,15 @@ const WriteReviewScreen = () => {
       return;
     }
 
+    if (!orderId || isNaN(orderId)) {
+      Alert.alert('Lỗi', 'Không tìm thấy thông tin đơn hàng. Vui lòng thử lại từ trang chi tiết đơn hàng.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       const result = await createReview(productId, {
-        orderId: 12345, // In real app, this would come from the order context
+        orderId,
         rating,
         comment
       });

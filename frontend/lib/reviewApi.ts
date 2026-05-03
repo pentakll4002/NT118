@@ -14,32 +14,14 @@ export interface CreateReviewRequest {
  * Fetch reviews for a specific product
  */
 export async function getProductReviews(productId: number, limit: number = 50): Promise<ProductReviewItemResponse[]> {
-  if (USE_MOCK) {
-    // In mock mode, we just return a shuffled set of mock reviews
-    return MOCK_REVIEWS.slice(0, limit);
-  }
-
   const res = await apiClient.get(`/api/products/${productId}/reviews`, { params: { limit } });
   return res.data?.data || res.data || [];
 }
 
 /**
- * Create a new review
+ * Create a new review — only works when the order has been delivered
  */
 export async function createReview(productId: number, data: CreateReviewRequest): Promise<{ success: boolean; message: string; reviewId?: number }> {
-  if (USE_MOCK) {
-    console.log('Simulating review submission for product:', productId, data);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          message: 'Đánh giá thành công (Mock Mode)',
-          reviewId: Math.floor(Math.random() * 1000)
-        });
-      }, 1000);
-    });
-  }
-
   try {
     const res = await apiClient.post(`/api/products/${productId}/reviews`, data);
     return {
@@ -48,9 +30,10 @@ export async function createReview(productId: number, data: CreateReviewRequest)
       reviewId: res.data?.reviewId
     };
   } catch (err: any) {
+    const msg = err?.response?.data?.message || err.message || 'Gửi đánh giá thất bại.';
     return {
       success: false,
-      message: err.message || 'Gửi đánh giá thất bại.'
+      message: msg
     };
   }
 }

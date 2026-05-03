@@ -53,7 +53,13 @@ apiClient.interceptors.request.use(async (config) => {
 });
 
 apiClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Automatically unwrap C# ApiResponse wrapper if present
+    if (res.data && typeof res.data === 'object' && 'success' in res.data && 'data' in res.data) {
+      res.data = res.data.data;
+    }
+    return res;
+  },
   (err) => {
     console.log('<<< API Error:', err.message);
     console.log('<<< Error code:', err.code);
