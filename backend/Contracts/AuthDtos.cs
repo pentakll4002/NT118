@@ -51,4 +51,4 @@ public record AuthResponse(string Token, long UserId, string Email, string Role)
 
 public record ForgotPasswordResponse(string Message, string? ResetCode);
 
-public record MessageResponse(string Message);
+public record MessageResponse(string Message, string? Code = null);

@@ -4,8 +4,8 @@ import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import ProductCard, { Product } from '../common/ProductCard';
 import { getProductById, getProducts, ProductDTO, formatPriceFull, formatSold } from '../../lib/productApi';
 import { toggleFavorite, getFavoriteStatus } from '../../lib/wishlistApi';
-import { getProductReviews } from '../../lib/reviewApi';
-import { ProductReviewItemResponse, ShopDTO } from '../../lib/mockData';
+import { getProductReviews, ReviewDto } from '../../lib/reviewApi';
+import { ShopDTO } from '../../lib/mockData';
 import { getShopById } from '../../lib/shopApi';
 import { addToCart } from '../../lib/cartApi';
 import { getMyOrders, getOrderDetail } from '../../lib/orderApi';
@@ -25,7 +25,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
-  const [reviews, setReviews] = useState<ProductReviewItemResponse[]>([]);
+  const [reviews, setReviews] = useState<ReviewDto[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [isLightboxVisible, setIsLightboxVisible] = useState(false);
@@ -85,8 +85,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
       // Load reviews
       try {
         setReviewsLoading(true);
-        const reviewData = await getProductReviews(productId, 3);
-        setReviews(reviewData);
+        const reviewResponse = await getProductReviews(productId, 1, 10);
+        setReviews(reviewResponse.reviews);
       } catch (err) {
         console.log('Failed to load reviews:', err);
       } finally {
@@ -464,7 +464,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
                 <View key={item.id} style={styles.reviewItem}>
                   <View style={styles.reviewHeader}>
                     <View style={styles.reviewerAvatar}>
-                      <Text style={styles.avatarText}>{item.reviewerName[0]}</Text>
+                      {item.reviewerAvatar ? (
+                        <Image source={{ uri: item.reviewerAvatar }} style={{ width: '100%', height: '100%', borderRadius: 20 }} />
+                      ) : (
+                        <Text style={styles.avatarText}>{item.reviewerName[0]}</Text>
+                      )}
                     </View>
                     <View style={styles.reviewerInfo}>
                       <Text style={styles.reviewerName}>{item.reviewerName}</Text>

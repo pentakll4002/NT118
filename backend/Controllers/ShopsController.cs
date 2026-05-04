@@ -531,7 +531,11 @@ public class ShopsController(AppDbContext db) : ControllerBase
             .AsNoTracking()
             .Where(x => x.UserId == userId)
             .OrderByDescending(x => x.CreatedAt)
-            .Select(x => x.Shop)
+            .Select(x => x.ShopId)
+            .Join(db.Shops,
+                shopId => shopId,
+                shop => shop.Id,
+                (shopId, shop) => shop)
             .Select(x => new ShopResponse(
                 x.Id,
                 x.Name,
@@ -562,6 +566,6 @@ public class ShopsController(AppDbContext db) : ControllerBase
             .FirstOrDefaultAsync(x => x.UserId == userId && x.ShopId == id, cancellationToken);
 
         return Ok(new FollowStatusResponse(follow != null, follow?.CreatedAt));
-    }
+    }    
 }
 

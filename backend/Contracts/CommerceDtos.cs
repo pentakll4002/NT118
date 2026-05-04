@@ -25,6 +25,9 @@ public class CreateReviewRequest
     [Range(1, long.MaxValue)]
     public long OrderId { get; set; }
 
+    [Range(1, long.MaxValue)]
+    public long ProductId { get; set; }
+
     [Range(1, 5)]
     public int Rating { get; set; }
 

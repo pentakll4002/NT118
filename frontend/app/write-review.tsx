@@ -20,28 +20,25 @@ const WriteReviewScreen = () => {
       return;
     }
 
-    if (!orderId || isNaN(orderId)) {
-      Alert.alert('Lỗi', 'Không tìm thấy thông tin đơn hàng. Vui lòng thử lại từ trang chi tiết đơn hàng.');
+    if (!orderId || isNaN(orderId) || !productId || isNaN(productId)) {
+      Alert.alert('Lỗi', 'Không tìm thấy thông tin sản phẩm hoặc đơn hàng. Vui lòng thử lại.');
       return;
     }
 
     try {
       setSubmitting(true);
-      const result = await createReview(productId, {
+      const result = await createReview({
         orderId,
+        productId,
         rating,
         comment
       });
 
-      if (result.success) {
-        Alert.alert('Thành công', result.message, [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
-      } else {
-        Alert.alert('Lỗi', result.message);
-      }
-    } catch (err) {
-      Alert.alert('Lỗi', 'Đã xảy ra lỗi không mong muốn.');
+      Alert.alert('Thành công', 'Đánh giá của bạn đã được gửi!', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Đã xảy ra lỗi khi gửi đánh giá.');
     } finally {
       setSubmitting(false);
     }

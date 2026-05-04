@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import { ShopDTO, MOCK_SHOPS } from './mockData';
 import { ProductDTO, getProducts } from './productApi';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 export interface CreateShopRequest {
   name: string;
   slug: string;
