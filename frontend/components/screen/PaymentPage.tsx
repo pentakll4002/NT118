@@ -6,6 +6,7 @@ import PaymentAddressSection, { UserAddressType } from '../common/PaymentAddress
 import PaymentProductSection, { CheckoutCartItem } from '../common/PaymentProductSection';
 import PaymentShippingSection from '../common/PaymentShippingSection';
 import PaymentMethodSection from '../common/PaymentMethodSection';
+import PaymentVoucherSection from '../common/PaymentVoucherSection';
 import PaymentSummarySection from '../common/PaymentSummarySection';
 import PaymentBottomBar from '../common/PaymentBottomBar';
 import AddressSelectionPage from './AddressSelectionPage';
@@ -33,6 +34,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [paymentUrl, setPaymentUrl] = useState<string | undefined>(undefined);
   const [editingAddressId, setEditingAddressId] = useState<number | undefined>(undefined);
+  const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; discount: number; voucherId: number } | null>(null);
 
   const fetchAddress = async () => {
     try {
@@ -100,7 +102,9 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   
   let finalTotal = productPrice + finalShipping; 
   if (insuranceSelected) finalTotal += insurancePrice;
-  const savings = Math.abs(shippingDiscount) + 20000;
+  if (appliedVoucher) finalTotal -= appliedVoucher.discount;
+  finalTotal = Math.max(0, finalTotal); // Ensure total doesn't go negative
+  const savings = Math.abs(shippingDiscount) + 20000 + (appliedVoucher?.discount || 0);
 
   const handleCheckout = async () => {
     try {
@@ -242,6 +246,17 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
           
           <PaymentShippingSection />
 
+          <PaymentVoucherSection 
+            orderAmount={productPrice + finalShipping + (insuranceSelected ? insurancePrice : 0)}
+            onVoucherApplied={(discount, code, voucherId) => {
+              setAppliedVoucher({ code, discount, voucherId });
+            }}
+            onVoucherRemoved={() => {
+              setAppliedVoucher(null);
+            }}
+            appliedVoucher={appliedVoucher || undefined}
+          />
+
           <View style={styles.sectionBlock}>
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>Tổng số tiền ({totalQuantity || 0} sản phẩm)</Text>
@@ -259,6 +274,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             shippingFee={shippingFee}
             shippingDiscount={shippingDiscount}
             finalTotal={finalTotal}
+            voucherDiscount={appliedVoucher?.discount}
           />
 
           <View style={{ height: 100 }} />
