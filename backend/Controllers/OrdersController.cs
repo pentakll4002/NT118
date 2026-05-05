@@ -14,6 +14,8 @@ using Backend.Services;
 [Route("api/orders")]
 public class OrdersController(AppDbContext db, INotificationRealtimeService notificationService) : ControllerBase
 {
+    private const decimal FallbackShippingFee = 25000m;
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<object>>> GetMyOrders(CancellationToken cancellationToken)
     {
@@ -156,7 +158,8 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
             });
         }
 
-        var shippingFee = subtotal >= 300000 ? 0 : 25000;
+        var shippingEstimate = await EstimateShippingFeeInternalAsync(shopIds[0], address, cancellationToken);
+        var shippingFee = shippingEstimate.ShippingFee;
         var discount = 0m;
         long? voucherId = null;
 
@@ -240,6 +243,43 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
         return Ok(new { message = "Đặt hàng thành công.", order.Id, order.OrderNumber, order.TotalAmount });
     }
 
+    [HttpPost("shipping-fee/estimate")]
+    public async Task<IActionResult> EstimateShippingFee([FromBody] EstimateShippingFeeRequest body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        if (body.Items.Count == 0)
+            return BadRequest(new { message = "Đơn hàng phải có ít nhất 1 sản phẩm." });
+
+        var address = await db.UserAddresses.FirstOrDefaultAsync(
+            x => x.Id == body.ShippingAddressId && x.UserId == userId,
+            cancellationToken);
+        if (address is null)
+            return BadRequest(new { message = "Địa chỉ giao hàng không hợp lệ." });
+
+        var productIds = body.Items.Select(x => x.ProductId).Distinct().ToList();
+        var products = await db.Products
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.Id) && x.Status == ProductStatus.active)
+            .ToListAsync(cancellationToken);
+
+        if (products.Count != productIds.Count)
+            return BadRequest(new { message = "Một số sản phẩm không hợp lệ hoặc ngừng bán." });
+
+        var shopIds = products.Select(x => x.ShopId).Distinct().ToList();
+        if (shopIds.Count != 1)
+            return BadRequest(new { message = "Mỗi đơn hàng chỉ hỗ trợ một shop." });
+
+        var estimate = await EstimateShippingFeeInternalAsync(shopIds[0], address, cancellationToken);
+        return Ok(new
+        {
+            estimate.ShippingFee,
+            estimate.DistanceKm,
+            estimate.IsFallback,
+        });
+    }
+
     [HttpPatch("{id:long}/status")]
     public async Task<IActionResult> UpdateOrderStatus(long id, [FromBody] UpdateOrderStatusRequest body, CancellationToken cancellationToken)
     {
@@ -261,4 +301,67 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
 
         return Ok(new { message = "Cập nhật trạng thái đơn hàng thành công." });
     }
+
+    private async Task<(decimal ShippingFee, double? DistanceKm, bool IsFallback)> EstimateShippingFeeInternalAsync(
+        long shopId,
+        UserAddress buyerAddress,
+        CancellationToken cancellationToken)
+    {
+        if (!buyerAddress.Latitude.HasValue || !buyerAddress.Longitude.HasValue)
+            return (FallbackShippingFee, null, true);
+
+        var shop = await db.Shops
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == shopId, cancellationToken);
+
+        if (shop is null)
+            return (FallbackShippingFee, null, true);
+
+        var shopAddress = await db.UserAddresses
+            .AsNoTracking()
+            .Where(x => x.UserId == shop.OwnerId && x.Latitude.HasValue && x.Longitude.HasValue)
+            .OrderByDescending(x => x.IsDefault)
+            .ThenByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (shopAddress is null)
+            return (FallbackShippingFee, null, true);
+
+        var distanceKm = CalculateHaversineDistanceKm(
+            shopAddress.Latitude!.Value,
+            shopAddress.Longitude!.Value,
+            buyerAddress.Latitude.Value,
+            buyerAddress.Longitude.Value);
+
+        return (CalculateDistanceBasedShippingFee(distanceKm), Math.Round(distanceKm, 2), false);
+    }
+
+    private static decimal CalculateDistanceBasedShippingFee(double distanceKm)
+    {
+        if (distanceKm <= 5d)
+            return 15000m;
+        if (distanceKm <= 10d)
+            return 25000m;
+        if (distanceKm <= 20d)
+            return 35000m;
+
+        var extraBlocks = (int)Math.Ceiling((distanceKm - 20d) / 5d);
+        return 35000m + (extraBlocks * 5000m);
+    }
+
+    private static double CalculateHaversineDistanceKm(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double earthRadiusKm = 6371d;
+        var dLat = ToRadians(lat2 - lat1);
+        var dLon = ToRadians(lon2 - lon1);
+
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+            + Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2))
+            * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return earthRadiusKm * c;
+    }
+
+    private static double ToRadians(double degree) => degree * (Math.PI / 180d);
 }

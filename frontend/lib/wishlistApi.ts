@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import { ProductDTO } from './productApi';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // ─── Favorites (heart toggle) ──────────────────────────────────
 

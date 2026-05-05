@@ -106,6 +106,15 @@ public class CreateOrderRequest
     public string? VoucherCode { get; set; }
 }
 
+public class EstimateShippingFeeRequest
+{
+    [Range(1, long.MaxValue)]
+    public long ShippingAddressId { get; set; }
+
+    [Required, MinLength(1)]
+    public IReadOnlyList<CreateOrderItemRequest> Items { get; set; } = new List<CreateOrderItemRequest>();
+}
+
 public class UpdateOrderStatusRequest
 {
     [Required]

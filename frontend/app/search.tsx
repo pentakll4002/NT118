@@ -42,8 +42,14 @@ export default function SearchScreen() {
   const loadSuggestions = async () => {
     try {
       setLoadingSuggestions(true);
-      const res = await getProducts({ page: 1, pageSize: 12, sort: 'popular' });
-      setSuggestedProducts(res.data.map(toCardProduct));
+      const [popularRes, newestRes] = await Promise.all([
+        getProducts({ page: 1, pageSize: 12, sort: 'popular' }),
+        getProducts({ page: 1, pageSize: 12, sort: 'newest' }),
+      ]);
+
+      const merged = [...newestRes.data, ...popularRes.data];
+      const deduped = merged.filter((item, index, arr) => arr.findIndex(x => x.id === item.id) === index);
+      setSuggestedProducts(deduped.slice(0, 12).map(toCardProduct));
     } catch (err) {
       console.log('Suggestions failed:', err);
     } finally {

@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { apiClient, API_BASE_URL } from './apiClient';
 import { getAuthToken } from './authToken';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // ── Types ────────────────────────────────────────────────────────────
 

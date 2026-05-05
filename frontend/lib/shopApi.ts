@@ -1,8 +1,7 @@
 import { apiClient } from './apiClient';
-import { ShopDTO, MOCK_SHOPS } from './mockData';
+import { ShopDTO } from './mockData';
 import { ProductDTO, getProducts } from './productApi';
 
-const USE_MOCK = false;
 export interface CreateShopRequest {
   name: string;
   slug: string;
@@ -119,10 +118,6 @@ export async function uploadImage(fileUri: string): Promise<string> {
  * Fetch list of shops followed by the current user
  */
 export async function getFollowedShops(): Promise<ShopDTO[]> {
-  if (USE_MOCK) {
-    return MOCK_SHOPS.slice(0, 3);
-  }
-
   try {
     const res = await apiClient.get('/api/shops/followed');
     return res.data;
@@ -136,10 +131,6 @@ export async function getFollowedShops(): Promise<ShopDTO[]> {
  * Check if the current user follows a specific shop
  */
 export async function getFollowStatus(shopId: number): Promise<{ isFollowing: boolean; followedAt?: string }> {
-  if (USE_MOCK) {
-    return { isFollowing: false };
-  }
-
   try {
     const res = await apiClient.get(`/api/shops/${shopId}/follow-status`);
     return res.data;

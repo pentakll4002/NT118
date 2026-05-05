@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient';
-import { MOCK_PRODUCTS } from './mockData';
+import { MOCK_PRODUCTS, MOCK_SHOPS } from './mockData';
 
 // Toggle to use mock data for testing
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface ViewHistoryItemDTO {
   productId: number;
@@ -94,6 +94,17 @@ export function formatSold(sold: number): string {
 export async function getProducts(params: ProductListParams = {}): Promise<PaginatedResponse<ProductDTO>> {
   if (USE_MOCK) {
     let filtered = [...MOCK_PRODUCTS];
+
+    if (params.shopId) {
+      const exact = filtered.filter(p => p.shopId === params.shopId);
+      if (exact.length > 0) {
+        filtered = exact;
+      } else {
+        const shop = MOCK_SHOPS.find(s => s.id === params.shopId);
+        filtered = shop ? filtered.filter(p => p.shopId === shop.ownerId) : [];
+      }
+    }
+
     if (params.q) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(params.q!.toLowerCase()));
     }
