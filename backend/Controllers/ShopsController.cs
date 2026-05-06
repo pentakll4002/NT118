@@ -531,7 +531,7 @@ public class ShopsController(AppDbContext db) : ControllerBase
             .AsNoTracking()
             .Where(x => x.UserId == userId)
             .OrderByDescending(x => x.CreatedAt)
-            .Select(x => x.Shop)
+            .Join(db.Shops, f => f.ShopId, s => s.Id, (f, s) => s)
             .Select(x => new ShopResponse(
                 x.Id,
                 x.Name,
