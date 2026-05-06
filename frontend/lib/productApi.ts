@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import { MOCK_PRODUCTS } from './mockData';
 
 // Toggle to use mock data for testing
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface ViewHistoryItemDTO {
   productId: number;
@@ -100,7 +100,7 @@ export async function getProducts(params: ProductListParams = {}): Promise<Pagin
     if (params.categoryId) {
       filtered = filtered.filter(p => p.categoryId === params.categoryId);
     }
-    
+
     // Simple mock pagination
     const page = params.page || 1;
     const pageSize = params.pageSize || 20;
