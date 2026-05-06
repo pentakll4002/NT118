@@ -1,0 +1,2 @@
+This file exists to ensure the wwwroot directory is preserved.
+ASP.NET Core's app.UseStaticFiles() requires the wwwroot directory to exist.
