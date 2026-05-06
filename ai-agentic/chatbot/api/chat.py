@@ -4,6 +4,8 @@ from typing import List, Optional, Dict
 from llm.rag import RAGPipeline
 from vectorstore.create import get_vector_store
 import config.setting as config
+import re
+import httpx
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -26,10 +28,74 @@ class ChatRequest(BaseModel):
     top_k: Optional[int] = None
 
 
+class ProductCard(BaseModel):
+    id: int
+    name: str
+    price: float
+    image: Optional[str] = None
+    rating: Optional[float] = None
+    deep_link: str
+
+
 class ChatResponse(BaseModel):
     answer: str
     sources: Optional[List[str]] = None
     num_sources: Optional[int] = None
+    products: Optional[List[ProductCard]] = None
+
+
+BACKEND_URL = config.__dict__.get("BACKEND_URL", "http://localhost:5058")
+
+PRODUCT_KEYWORDS = [
+    "tim", "mua", "san pham", "sản phẩm", "tìm", "giá", "gia",
+    "điện thoại", "dien thoai", "laptop", "tai nghe", "giày", "giay",
+    "áo", "ao", "quần", "quan", "đồng hồ", "dong ho", "máy tính", "may tinh",
+    "phụ kiện", "phu kien", "bàn phím", "ban phim", "chuột", "chuot",
+    "túi", "tui", "balo", "gợi ý", "goi y", "đề xuất", "de xuat",
+    "recommend", "search", "suggest", "có gì", "co gi", "loại nào", "loai nao",
+    "rẻ", "re", "tốt", "tot", "nên mua", "nen mua", "giảm giá", "giam gia",
+    "khuyến mãi", "khuyen mai", "voucher",
+]
+
+
+def is_product_query(message: str) -> bool:
+    """Detect if the user message is asking about products."""
+    msg_lower = message.lower()
+    return any(kw in msg_lower for kw in PRODUCT_KEYWORDS)
+
+
+async def fetch_products_from_backend(query: str, max_results: int = 4) -> List[ProductCard]:
+    """Search products from the .NET backend."""
+    try:
+        params = {"q": query, "pageSize": max_results}
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            response = await client.get(f"{BACKEND_URL}/api/products", params=params)
+            response.raise_for_status()
+
+        data = response.json()
+        if isinstance(data, dict) and "data" in data and "success" in data:
+            data = data["data"]
+
+        items = []
+        if isinstance(data, dict):
+            items = data.get("data", data.get("items", []))
+        elif isinstance(data, list):
+            items = data
+
+        products = []
+        for item in items[:max_results]:
+            products.append(ProductCard(
+                id=item.get("id", 0),
+                name=item.get("name", ""),
+                price=item.get("price", 0),
+                image=item.get("image"),
+                rating=item.get("rating"),
+                deep_link=f"/product/{item.get('id', 0)}"
+            ))
+        return products
+    except Exception as e:
+        print(f"Failed to fetch products from backend: {e}")
+        return []
 
 
 _rag_pipeline = None
@@ -111,7 +177,8 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             answer=answer,
             sources=None,
-            num_sources=0
+            num_sources=0,
+            products=None
         )
 
     except HTTPException:
@@ -123,7 +190,8 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             answer="ShopAI xin loi vi su bat tien. He thong dang duoc khac phuc. Ban vui long thu lai sau nhe!",
             sources=None,
-            num_sources=0
+            num_sources=0,
+            products=None
         )
 
 

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from api import chat
+from api import products as products_api
 
 try:
     from api import upload
@@ -51,9 +52,16 @@ app.add_middleware(
 )
 
 app.include_router(chat.router)
+try:
+    from api import search
+    app.include_router(search.router)
+except ImportError as e:
+    print(f"Warning: Search router not available: {e}")
+
 if upload_available:
     app.include_router(upload.router)
 
+app.include_router(products_api.router)
 
 @app.get("/")
 async def root():
