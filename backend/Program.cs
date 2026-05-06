@@ -98,6 +98,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<INotificationRealtimeService, NotificationRealtimeService>();
 builder.Services.AddHttpContextAccessor();
 
@@ -222,6 +223,12 @@ using (var scope = app.Services.CreateScope())
         ALTER TABLE users
             ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(20),
             ADD COLUMN IF NOT EXISTS password_reset_code_expires TIMESTAMP;
+
+        ALTER TABLE user_addresses
+            ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+            ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+            ADD COLUMN IF NOT EXISTS poi_name VARCHAR(200),
+            ADD COLUMN IF NOT EXISTS formatted_address VARCHAR(500);
     ");
 
     // Apply pending migrations only if the database is already managed by EF migrations.

@@ -50,26 +50,7 @@ export interface RealtimeMessage {
 
 /** Get list of conversations for current user */
 export async function getConversations(): Promise<ConversationDTO[]> {
-  if (USE_MOCK) {
-    return [
-      {
-        partnerId: 1,
-        partnerName: 'Shop Thời Trang ABC',
-        partnerAvatar: 'https://i.pravatar.cc/150?u=1',
-        lastMessage: 'Chào anh, Shop đã gửi hàng cho mình rồi ạ!',
-        lastMessageTime: new Date().toISOString(),
-        unreadCount: 2,
-      },
-      {
-        partnerId: 2,
-        partnerName: 'Đồ Gia Dụng X',
-        partnerAvatar: 'https://i.pravatar.cc/150?u=2',
-        lastMessage: 'Sản phẩm này còn hàng không shop?',
-        lastMessageTime: new Date(Date.now() - 3600000).toISOString(),
-        unreadCount: 0,
-      }
-    ];
-  }
+
   const res = await apiClient.get('/api/messages/conversations');
   const data = res.data?.data || res.data;
   return Array.isArray(data) ? data : [];
@@ -77,43 +58,7 @@ export async function getConversations(): Promise<ConversationDTO[]> {
 
 /** Get messages between current user and a partner */
 export async function getMessages(receiverId: number, limit = 100): Promise<MessageDTO[]> {
-  if (USE_MOCK) {
-    return [
-      {
-        id: 1,
-        senderId: 999, // 'me'
-        receiverId: receiverId,
-        orderId: null,
-        messageType: 'text',
-        content: 'Shop ơi, mình muốn hỏi về sản phẩm này',
-        attachmentUrl: null,
-        isRead: true,
-        sentAt: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 2,
-        senderId: receiverId, // 'other'
-        receiverId: 999,
-        orderId: null,
-        messageType: 'text',
-        content: 'Chào bạn, Shop có thể giúp gì cho bạn ạ?',
-        attachmentUrl: null,
-        isRead: true,
-        sentAt: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 3,
-        senderId: receiverId,
-        receiverId: 999,
-        orderId: null,
-        messageType: 'image',
-        content: '',
-        attachmentUrl: 'https://picsum.photos/400/300',
-        isRead: false,
-        sentAt: new Date().toISOString(),
-      }
-    ];
-  }
+
   const res = await apiClient.get('/api/messages', {
     params: { receiverId, limit },
   });

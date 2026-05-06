@@ -1,91 +1,109 @@
 using Backend.Contracts;
-using Backend.Data;
-using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers;
 
 [ApiController]
-public class ReviewsController(AppDbContext db) : ControllerBase
+[Route("api/reviews")]
+public class ReviewsController(IReviewService reviewService) : ControllerBase
 {
     [Authorize]
-    [HttpPost("api/products/{id:long}/reviews")]
-    public async Task<IActionResult> CreateReview(long id, [FromBody] CreateReviewRequest body, CancellationToken cancellationToken)
+    [HttpPost]
+    public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest body, CancellationToken cancellationToken)
     {
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        if (body.Rating is < 1 or > 5)
-            return BadRequest(new { message = "Rating phải từ 1 đến 5." });
-
-        var order = await db.Orders.FirstOrDefaultAsync(
-            x => x.Id == body.OrderId && x.BuyerId == userId,
-            cancellationToken);
-        if (order is null)
-            return BadRequest(new { message = "Đơn hàng không hợp lệ." });
-
-        if (order.Status != OrderStatus.delivered)
-            return BadRequest(new { message = "Chỉ có thể đánh giá sản phẩm khi đơn hàng đã giao thành công." });
-
-        // Verify the product was actually in this order
-        var hasProduct = await db.OrderItems.AnyAsync(
-            x => x.OrderId == body.OrderId && x.ProductId == id,
-            cancellationToken);
-        if (!hasProduct)
-            return BadRequest(new { message = "Sản phẩm không có trong đơn hàng này." });
-
-        var exists = await db.Reviews.AnyAsync(
-            x => x.OrderId == body.OrderId && x.ProductId == id && x.ReviewerId == userId,
-            cancellationToken);
-        if (exists)
-            return Conflict(new { message = "Bạn đã đánh giá sản phẩm này trong đơn hàng." });
-
-        var review = new Review
+        try
         {
-            OrderId = body.OrderId,
-            ProductId = id,
-            ReviewerId = userId,
-            Rating = body.Rating,
-            Comment = body.Comment,
-            IsVerified = true,
-            HelpfulVotes = 0,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
-
-        db.Reviews.Add(review);
-
-        var product = await db.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (product is not null)
-        {
-            var newTotalReviews = product.TotalReviews + 1;
-            product.Rating = Math.Round(((product.Rating * product.TotalReviews) + body.Rating) / Math.Max(1, newTotalReviews), 2);
-            product.TotalReviews = newTotalReviews;
-            product.UpdatedAt = DateTime.UtcNow;
+            var result = await reviewService.CreateReviewAsync(userId, body, cancellationToken);
+            return Created($"/api/reviews/{result.Id}", result);
         }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return Ok(new { message = "Đánh giá thành công.", reviewId = review.Id });
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
+    /// <summary>
+    /// GET /api/reviews/{productId} — Get reviews for a product (public)
+    /// </summary>
+    [HttpGet("{productId:long}")]
+    public async Task<IActionResult> GetProductReviews(long productId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await reviewService.GetProductReviewsAsync(productId, page, pageSize, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/reviews/order/{orderId}/status — Check if user can review order (requires auth)
+    /// </summary>
     [Authorize]
-    [HttpDelete("api/reviews/{id:long}")]
-    public async Task<IActionResult> DeleteReview(long id, CancellationToken cancellationToken)
+    [HttpGet("order/{orderId:long}/status")]
+    public async Task<IActionResult> GetOrderReviewStatus(long orderId, CancellationToken cancellationToken)
     {
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        var review = await db.Reviews.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (review is null)
-            return NotFound();
+        try
+        {
+            var result = await reviewService.GetOrderReviewStatusAsync(orderId, userId, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
-        if (review.ReviewerId != userId && !this.IsAdmin())
-            return Forbid();
+    /// <summary>
+    /// PUT /api/reviews/{reviewId} — Update a review (only by reviewer)
+    /// </summary>
+    [Authorize]
+    [HttpPut("{reviewId:long}")]
+    public async Task<IActionResult> UpdateReview(long reviewId, [FromBody] UpdateReviewRequest body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
 
-        db.Reviews.Remove(review);
-        await db.SaveChangesAsync(cancellationToken);
-        return NoContent();
+        try
+        {
+            var result = await reviewService.UpdateReviewAsync(userId, reviewId, body, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// DELETE /api/reviews/{reviewId} — Delete a review (only by reviewer)
+    /// </summary>
+    [Authorize]
+    [HttpDelete("{reviewId:long}")]
+    public async Task<IActionResult> DeleteReview(long reviewId, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        try
+        {
+            await reviewService.DeleteReviewAsync(userId, reviewId, cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

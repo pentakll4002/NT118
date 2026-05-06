@@ -6,6 +6,7 @@ import PaymentAddressSection, { UserAddressType } from '../common/PaymentAddress
 import PaymentProductSection, { CheckoutCartItem } from '../common/PaymentProductSection';
 import PaymentShippingSection from '../common/PaymentShippingSection';
 import PaymentMethodSection from '../common/PaymentMethodSection';
+import PaymentVoucherSection from '../common/PaymentVoucherSection';
 import PaymentSummarySection from '../common/PaymentSummarySection';
 import PaymentBottomBar from '../common/PaymentBottomBar';
 import { PLATFORM_VOUCHERS } from '../../features/Cart/PlatformVoucherModal';
@@ -42,6 +43,10 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [shopVoucher, setShopVoucher] = useState<any | null>(null);
   const [platformVouchers, setPlatformVouchers] = useState<any[]>([]);
   const [message, setMessage] = useState<string>('');
+  const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; discount: number; voucherId: number } | null>(null);
+  const [shippingFee, setShippingFee] = useState<number>(25000);
+  const [shippingDistanceKm, setShippingDistanceKm] = useState<number | null>(null);
+  const [isEstimatingShipping, setIsEstimatingShipping] = useState(false);
 
   const fetchAddress = async () => {
     try {
@@ -124,7 +129,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
 
   const totalQuantity = cartItems.reduce((sum, x) => sum + (x.quantity || 0), 0);
   const productPrice = cartItems.reduce((sum, x) => sum + (x.unitPrice || 0) * (x.quantity || 0), 0);
-  
+    
   let shippingFee = 0;
   if (shippingMethod === 'tietkiem') shippingFee = 16000;
   else if (shippingMethod === 'nhanh') shippingFee = 35700;
@@ -132,6 +137,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   // 'mienshi' => 0
 
   const shippingDiscount = shippingFee > 0 ? -Math.min(shippingFee, 19700) : 0;
+  const shippingDiscount = 0;
   const insurancePrice = 579;
   const finalShipping = shippingFee + shippingDiscount; 
   
@@ -180,6 +186,51 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   finalTotal = Math.max(0, finalTotal);
 
   const savings = totalSaved;
+  if (appliedVoucher) finalTotal -= appliedVoucher.discount;
+  finalTotal = Math.max(0, finalTotal); // Ensure total doesn't go negative
+  const savings = Math.abs(shippingDiscount) + (appliedVoucher?.discount || 0);
+
+  useEffect(() => {
+    const estimateShippingFee = async () => {
+      if (!selectedAddress?.id || cartItems.length === 0) {
+        setShippingDistanceKm(null);
+        return;
+      }
+
+      try {
+        setIsEstimatingShipping(true);
+        const payload = {
+          shippingAddressId: selectedAddress.id,
+          items: cartItems.map(x => ({
+            productId: x.productId,
+            variantId: x.variantId,
+            quantity: x.quantity,
+          })),
+        };
+
+        const response = await apiClient.post('/api/orders/shipping-fee/estimate', payload);
+        const result = response.data?.data || response.data;
+        const nextShippingFee = Number(result?.shippingFee);
+        const nextDistance = result?.distanceKm;
+
+        if (Number.isFinite(nextShippingFee) && nextShippingFee >= 0) {
+          setShippingFee(nextShippingFee);
+        } else {
+          setShippingFee(25000);
+        }
+
+        setShippingDistanceKm(typeof nextDistance === 'number' ? nextDistance : null);
+      } catch (error) {
+        console.log('Failed to estimate shipping fee:', error);
+        setShippingFee(25000);
+        setShippingDistanceKm(null);
+      } finally {
+        setIsEstimatingShipping(false);
+      }
+    };
+
+    estimateShippingFee();
+  }, [selectedAddress?.id, cartItems]);
 
   const handleCheckout = async () => {
     try {
@@ -359,6 +410,25 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             </View>
           )}
 
+          {!!shippingDistanceKm && (
+            <View style={styles.distanceHintBlock}>
+              <Text style={styles.distanceHintText}>
+                Quang duong giao hang: {shippingDistanceKm.toFixed(2)} km
+              </Text>
+            </View>
+          )}
+
+          <PaymentVoucherSection 
+            orderAmount={productPrice + finalShipping + (insuranceSelected ? insurancePrice : 0)}
+            onVoucherApplied={(discount, code, voucherId) => {
+              setAppliedVoucher({ code, discount, voucherId });
+            }}
+            onVoucherRemoved={() => {
+              setAppliedVoucher(null);
+            }}
+            appliedVoucher={appliedVoucher || undefined}
+          />
+
           <View style={styles.sectionBlock}>
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>Tổng số tiền ({totalQuantity || 0} sản phẩm)</Text>
@@ -376,6 +446,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             shippingFee={shippingFee}
             shippingDiscount={shippingDiscount}
             finalTotal={finalTotal}
+            voucherDiscount={appliedVoucher?.discount}
           />
 
           <View style={{ height: 100 }} />
@@ -385,7 +456,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
           finalTotal={finalTotal}
           savings={savings}
           onOrderPress={handleCheckout}
-          loading={isProcessing}
+          loading={isProcessing || isEstimatingShipping}
         />
 
       </SafeAreaView>
@@ -436,5 +507,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#000',
+  },
+  distanceHintBlock: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  distanceHintText: {
+    fontSize: 13,
+    color: '#666',
   },
 });

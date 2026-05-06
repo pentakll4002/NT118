@@ -17,9 +17,11 @@ public class AuthService(
     AppDbContext db,
     IOptions<JwtOptions> jwtOptions,
     IMemoryCache cache,
-    IEmailService emailService) : IAuthService
+    IEmailService emailService,
+    IOptions<AppFeatureOptions> features) : IAuthService
 {
     private readonly JwtOptions _jwt = jwtOptions.Value;
+    private readonly AppFeatureOptions _features = features.Value;
     private readonly PasswordHasher<User> _passwordHasher = new();
     private const string RegisterCaptchaPrefix = "register-captcha:";
 
@@ -41,6 +43,9 @@ public class AuthService(
         var subject = "Ma xac thuc dang ky NT118";
         var body = $"Ma captcha cua ban la: {code}. Ma co hieu luc trong 10 phut.";
         await emailService.SendAsync(email, subject, body, cancellationToken);
+
+        if (_features.ExposePasswordResetCodes)
+            return new MessageResponse("Đã gửi mã captcha qua email.", code);
 
         return new MessageResponse("Đã gửi mã captcha qua email.");
     }

@@ -1,6 +1,5 @@
 import { UserCartItemResponse } from '../../lib/cartApi';
 import { CartSectionType, CartSummaryType, CartItemType } from './cart.types';
-import { MOCK_PRODUCTS, MOCK_SHOPS } from '../../lib/mockData';
 
 export const mapBackendCartToSections = (items: UserCartItemResponse[]): CartSectionType[] => {
   if (items.length === 0) return [];

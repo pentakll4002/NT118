@@ -6,8 +6,8 @@ import { reverseGeocodeNominatim, ReverseGeocodeResult } from '../../lib/geocode
 interface MapProps {
   latitude: number;
   longitude: number;
-  title?: string; // fallback when POI unavailable
-  description?: string; // fallback when formatted address unavailable
+  title?: string;
+  description?: string;
   onCoordinateChange?: (coord: { latitude: number; longitude: number }) => void;
   interactive?: boolean;
 }

@@ -7,9 +7,10 @@ interface PaymentSummarySectionProps {
   shippingFee: number;
   shippingDiscount: number;
   finalTotal: number;
+  voucherDiscount?: number;
 }
 
-export default function PaymentSummarySection({ productPrice, shippingFee, shippingDiscount, finalTotal }: PaymentSummarySectionProps) {
+export default function PaymentSummarySection({ productPrice, shippingFee, shippingDiscount, finalTotal, voucherDiscount }: PaymentSummarySectionProps) {
   return (
     <>
       <View style={styles.sectionBlock}>
@@ -27,6 +28,12 @@ export default function PaymentSummarySection({ productPrice, shippingFee, shipp
           <Text style={styles.detailListLabel}>Giảm giá phí vận chuyển</Text>
           <Text style={styles.detailListDiscount}>{shippingDiscount.toLocaleString('vi-VN')}đ</Text>
         </View>
+        {voucherDiscount ? (
+          <View style={styles.detailListRow}>
+            <Text style={styles.detailListLabel}>Giảm từ voucher</Text>
+            <Text style={styles.detailListDiscount}>-{voucherDiscount.toLocaleString('vi-VN')}đ</Text>
+          </View>
+        ) : null}
         <View style={[styles.detailListRow, { marginTop: 8 }]}>
           <Text style={styles.detailListLabelBig}>Tổng thanh toán</Text>
           <Text style={styles.detailListValueBig}>{finalTotal.toLocaleString('vi-VN')}đ</Text>
@@ -35,7 +42,7 @@ export default function PaymentSummarySection({ productPrice, shippingFee, shipp
 
       <View style={styles.termsBlock}>
         <MaterialCommunityIcons name="file-document-outline" size={16} color="#888" />
-        <Text style={styles.termsText}> Nhấn "Đặt hàng" đồng nghĩa với việc bạn đồng ý tuân theo <Text style={styles.termsLink}>Điều khoản Shopee</Text></Text>
+        <Text style={styles.termsText}> Nhấn &quot;Đặt hàng&quot; đồng nghĩa với việc bạn đồng ý tuân theo <Text style={styles.termsLink}>Điều khoản Shopee</Text></Text>
       </View>
     </>
   );

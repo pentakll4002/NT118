@@ -48,25 +48,7 @@ const USE_MOCK = false;
 export const userApi = {
   // --- Profile ---
   getProfile: async (): Promise<UserProfileDTO> => {
-    if (USE_MOCK) {
-      const token = await getAuthToken();
-      if (token?.startsWith('mock-token:')) {
-        const [, role, email] = token.split(':');
-        return {
-          id: 999,
-          email: email || 'user@test.com',
-          name: email ? email.split('@')[0] : 'Mock User',
-          role: (role as any) || 'buyer',
-        };
-      }
-      // Fallback for old mock tokens
-      return {
-        id: 999,
-        email: 'admin@test.com',
-        name: 'Admin Tester',
-        role: 'admin',
-      };
-    }
+
     const res = await apiClient.get('/api/user/profile');
     const raw = res.data?.data || res.data;
     // Map backend UserProfileResponse to frontend UserProfileDTO
@@ -107,21 +89,7 @@ export const userApi = {
 
   // --- Addresses ---
   getAddresses: async (): Promise<UserAddressDTO[]> => {
-    if (USE_MOCK) {
-      return [
-        {
-          id: 1,
-          userId: 1,
-          recipientName: 'Nguyễn Văn A',
-          recipientPhone: '0987654321',
-          province: 'Hà Nội',
-          district: 'Cầu Giấy',
-          ward: 'Dịch Vọng',
-          streetAddress: 'Số 123 Đường Cầu Giấy',
-          isDefault: true,
-        }
-      ];
-    }
+
     const res = await apiClient.get('/api/user/addresses');
     return res.data?.data || res.data || [];
   },
