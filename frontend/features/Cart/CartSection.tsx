@@ -28,7 +28,7 @@ export default function CartSection({
   shopName,
   checked,
   items,
-  voucherLabel = 'ShopeeLite Voucher',
+  voucherLabel = 'Voucher của Shop',
   voucherValue = 'Chọn hoặc nhập mã',
   onToggleShop,
   onPressShop,

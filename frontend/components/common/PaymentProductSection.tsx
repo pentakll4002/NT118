@@ -12,6 +12,7 @@ export type CheckoutCartItem = {
   variantId?: number | null;
   variantName?: string | null;
   variantValue?: string | null;
+  shopId?: number;
 };
 
 interface PaymentProductSectionProps {

@@ -131,7 +131,7 @@ export default function useCartScreen() {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = (platformVoucherIds?: string, shopVoucherId?: number) => {
     const selectedIds = sections
       .flatMap(s => s.items)
       .filter(i => i.checked && !i.disabled)
@@ -144,7 +144,11 @@ export default function useCartScreen() {
     
     router.push({
       pathname: '/payment',
-      params: { cartItemIds: selectedIds.join(',') }
+      params: { 
+        cartItemIds: selectedIds.join(','),
+        ...(platformVoucherIds ? { platformVoucherIds: platformVoucherIds } : {}),
+        ...(shopVoucherId ? { shopVoucherId: shopVoucherId.toString() } : {})
+      }
     });
   };
 

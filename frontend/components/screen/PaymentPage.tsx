@@ -8,10 +8,13 @@ import PaymentShippingSection from '../common/PaymentShippingSection';
 import PaymentMethodSection from '../common/PaymentMethodSection';
 import PaymentSummarySection from '../common/PaymentSummarySection';
 import PaymentBottomBar from '../common/PaymentBottomBar';
+import { PLATFORM_VOUCHERS } from '../../features/Cart/PlatformVoucherModal';
 import AddressSelectionPage from './AddressSelectionPage';
 import AddAddressPage from './AddAddressPage';
 import OrderSuccessPage from './OrderSuccessPage';
 import { apiClient } from '../../lib/apiClient';
+import { sendMessage } from '../../lib/messageApi';
+import { ShippingMethod } from '../common/PaymentShippingSection';
 
 interface PaymentPageProps {
   onClose: () => void;
@@ -19,11 +22,13 @@ interface PaymentPageProps {
   productId?: number;
   quantity?: number;
   cartItemIds?: string;
+  platformVoucherIds?: string;
+  shopVoucherId?: number;
 }
 
 type ScreenState = 'payment' | 'address_selection' | 'add_address' | 'success';
 
-export default function PaymentPage({ onClose, totalAmount, productId, quantity, cartItemIds }: PaymentPageProps) {
+export default function PaymentPage({ onClose, totalAmount, productId, quantity, cartItemIds, platformVoucherIds, shopVoucherId }: PaymentPageProps) {
   const [activeScreen, setActiveScreen] = useState<ScreenState>('payment');
   const [insuranceSelected, setInsuranceSelected] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,6 +38,10 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [paymentUrl, setPaymentUrl] = useState<string | undefined>(undefined);
   const [editingAddressId, setEditingAddressId] = useState<number | undefined>(undefined);
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('mienshi' as ShippingMethod);
+  const [shopVoucher, setShopVoucher] = useState<any | null>(null);
+  const [platformVouchers, setPlatformVouchers] = useState<any[]>([]);
+  const [message, setMessage] = useState<string>('');
 
   const fetchAddress = async () => {
     try {
@@ -60,6 +69,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             unitPrice: prod.price,
             quantity: quantity,
             mainImageUrl: prod.image,
+            shopId: prod.shopId,
           }]);
         }
       } catch (error) {
@@ -80,6 +90,27 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
       console.log('Failed to fetch cart:', error);
       setCartItems([]);
     }
+
+    if (platformVoucherIds) {
+      try {
+        const ids = platformVoucherIds.split(',');
+        const founds = PLATFORM_VOUCHERS.filter((v: any) => ids.includes(v.id));
+        setPlatformVouchers(founds);
+      } catch (e) {
+        console.log('Failed to parse platform vouchers', e);
+      }
+    }
+
+    if (shopVoucherId) {
+      try {
+        const res = await apiClient.get('/api/vouchers');
+        const vouchers = res.data?.data || res.data || [];
+        const found = vouchers.find((v: any) => v.id === shopVoucherId);
+        if (found) setShopVoucher(found);
+      } catch (e) {
+        console.log('Failed to fetch shop voucher', e);
+      }
+    }
   };
 
   useEffect(() => {
@@ -93,14 +124,62 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
 
   const totalQuantity = cartItems.reduce((sum, x) => sum + (x.quantity || 0), 0);
   const productPrice = cartItems.reduce((sum, x) => sum + (x.unitPrice || 0) * (x.quantity || 0), 0);
-  const shippingFee = 35700;
-  const shippingDiscount = -19700;
+  
+  let shippingFee = 0;
+  if (shippingMethod === 'tietkiem') shippingFee = 16000;
+  else if (shippingMethod === 'nhanh') shippingFee = 35700;
+  else if (shippingMethod === 'hoatoc') shippingFee = 50000;
+  // 'mienshi' => 0
+
+  const shippingDiscount = shippingFee > 0 ? -Math.min(shippingFee, 19700) : 0;
   const insurancePrice = 579;
   const finalShipping = shippingFee + shippingDiscount; 
   
+  const isFreeship = (v: any) => (v.code && v.code.includes('FREESHIP')) || (v.name && v.name.toLowerCase().includes('miễn phí'));
+
   let finalTotal = productPrice + finalShipping; 
+  let totalSaved = Math.abs(shippingDiscount);
+  
+  if (shopVoucher) {
+    if (shopVoucher.discountType === 'Percentage') {
+      let discount = (finalTotal * shopVoucher.discountValue / 100);
+      if (shopVoucher.maxDiscount) discount = Math.min(discount, shopVoucher.maxDiscount);
+      finalTotal -= discount;
+      totalSaved += discount;
+    } else {
+      finalTotal -= shopVoucher.discountValue;
+      totalSaved += shopVoucher.discountValue;
+    }
+  }
+  
+  platformVouchers.forEach(pv => {
+    if (isFreeship(pv)) {
+      // Apply to shipping
+      let sDiscount = pv.discountValue;
+      if (pv.discountType === 'Percentage') {
+        sDiscount = (finalShipping * pv.discountValue / 100);
+        if (pv.maxDiscount) sDiscount = Math.min(sDiscount, pv.maxDiscount);
+      }
+      finalTotal -= sDiscount;
+      totalSaved += sDiscount;
+    } else {
+      // Apply to total
+      if (pv.discountType === 'Percentage') {
+        let discount = (finalTotal * pv.discountValue / 100);
+        if (pv.maxDiscount) discount = Math.min(discount, pv.maxDiscount);
+        finalTotal -= discount;
+        totalSaved += discount;
+      } else {
+        finalTotal -= pv.discountValue;
+        totalSaved += pv.discountValue;
+      }
+    }
+  });
+  
   if (insuranceSelected) finalTotal += insurancePrice;
-  const savings = Math.abs(shippingDiscount) + 20000;
+  finalTotal = Math.max(0, finalTotal);
+
+  const savings = totalSaved;
 
   const handleCheckout = async () => {
     try {
@@ -130,6 +209,20 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
       const orderData = orderRes.data?.data || orderRes.data;
       const realOrderId = orderData.id || orderData.Id || 1;
       const realTotalAmount = orderData.totalAmount || orderData.TotalAmount || finalTotal;
+
+      if (message.trim() && cartItems.length > 0) {
+        // Try to send message to shop
+        try {
+          const shopId = cartItems[0].shopId || 1; 
+          await sendMessage({
+            receiverId: shopId, 
+            content: message.trim(),
+            orderId: realOrderId
+          });
+        } catch(e) {
+          console.log("Could not send message to shop", e);
+        }
+      }
 
       if (paymentMethod === 'cod') {
         // order successful
@@ -240,7 +333,31 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             items={cartItems}
           />
           
-          <PaymentShippingSection />
+          <PaymentShippingSection 
+            shippingMethod={shippingMethod}
+            onChangeShippingMethod={setShippingMethod}
+            shippingFee={shippingFee}
+            message={message}
+            onChangeMessage={setMessage}
+            shopVoucher={shopVoucher}
+            onChangeShopVoucher={setShopVoucher}
+          />
+
+          {platformVouchers.length > 0 && (
+            <View style={styles.sectionBlock}>
+              <Text style={{ fontSize: 14, color: '#333', marginBottom: 8, fontWeight: '500' }}>ShopeeLite Voucher</Text>
+              {platformVouchers.map((pv, idx) => (
+                <View key={pv.id} style={[styles.subtotalRow, { marginBottom: idx !== platformVouchers.length - 1 ? 6 : 0 }]}>
+                  <Text style={[styles.subtotalLabel, { color: '#666', fontSize: 13 }]}>- {pv.name}</Text>
+                  <Text style={[styles.subtotalValue, { color: '#EE4D2D', fontSize: 13 }]}>
+                    {pv.discountType === 'Percentage' 
+                      ? `-${pv.discountValue}%` 
+                      : `-${pv.discountValue.toLocaleString('vi-VN')}đ`}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.sectionBlock}>
             <View style={styles.subtotalRow}>

@@ -8,6 +8,9 @@ import CartSection from '../../features/Cart/CartSection';
 import CartShippingProgress from '../../features/Cart/CartShippingProgress';
 import useCartScreen from '../../features/Cart/useCartScreen';
 import ProductCard from '../common/ProductCard';
+import VoucherSelectorRow from '../../features/Cart/VoucherSelectorRow';
+import PlatformVoucherModal from '../../features/Cart/PlatformVoucherModal';
+import ShopVoucherModal from '../common/ShopVoucherModal';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +34,52 @@ export default function CartScreen() {
   } = useCartScreen();
 
   const isEmpty = sections.length === 0;
+  const [showVoucherModal, setShowVoucherModal] = React.useState(false);
+  const [selectedPlatformVouchers, setSelectedPlatformVouchers] = React.useState<any[]>([]);
+  const [selectedShopVouchers, setSelectedShopVouchers] = React.useState<Record<string, any>>({});
+  const [activeShopVoucherShopId, setActiveShopVoucherShopId] = React.useState<string | null>(null);
+
+  const isFreeship = (v: any) => (v.code && v.code.includes('FREESHIP')) || (v.name && v.name.toLowerCase().includes('miễn phí'));
+
+  let finalPrice = summary.totalPrice;
+  
+  // Apply platform vouchers
+  if (selectedPlatformVouchers.length > 0) {
+    selectedPlatformVouchers.forEach(voucher => {
+      if (!isFreeship(voucher)) {
+        if (voucher.discountType === 'Percentage') {
+          let discount = finalPrice * (voucher.discountValue / 100);
+          if (voucher.maxDiscount) {
+            discount = Math.min(discount, voucher.maxDiscount);
+          }
+          finalPrice -= discount;
+        } else {
+          finalPrice -= voucher.discountValue;
+        }
+      }
+    });
+  }
+  
+  // Apply shop vouchers
+  Object.values(selectedShopVouchers).forEach(sv => {
+    if (sv) {
+      if (sv.discountType === 'Percentage') {
+        let discount = finalPrice * (sv.discountValue / 100);
+        if (sv.maxDiscount) discount = Math.min(discount, sv.maxDiscount);
+        finalPrice -= discount;
+      } else {
+        finalPrice -= sv.discountValue;
+      }
+    }
+  });
+
+  finalPrice = Math.max(0, finalPrice);
+
+  const onCheckoutPress = () => {
+    const platformVoucherIdsStr = selectedPlatformVouchers.length > 0 ? selectedPlatformVouchers.map(v => v.id).join(',') : undefined;
+    const shopVoucherId = Object.values(selectedShopVouchers)[0]?.id;
+    handleCheckout(platformVoucherIdsStr, shopVoucherId);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,18 +121,26 @@ export default function CartScreen() {
                 shopName={section.shopName}
                 checked={section.checked}
                 items={section.items}
-                voucherLabel={section.voucherLabel}
-                voucherValue={section.voucherValue}
+                voucherLabel="Voucher của Shop"
+                voucherValue={selectedShopVouchers[section.shopId] ? `Đã chọn: ${selectedShopVouchers[section.shopId].code}` : 'Chọn hoặc nhập mã'}
                 onToggleShop={handleToggleShop}
                 onToggleItem={handleToggleItem}
                 onIncreaseItem={handleIncreaseItem}
                 onDecreaseItem={handleDecreaseItem}
-                onPressVoucher={handlePressVoucher}
+                onPressVoucher={(id) => setActiveShopVoucherShopId(id)}
                 onPressItem={handlePressItem}
                 onDeleteShop={handleDeleteShop}
                 onDeleteItem={handleDeleteItem}
               />
             ))}
+            
+            <View style={{ marginTop: 12 }}>
+              <VoucherSelectorRow
+                label="ShopeeLite Voucher"
+                value={selectedPlatformVouchers.length > 0 ? `Đã chọn ${selectedPlatformVouchers.length} mã` : 'Chọn hoặc nhập mã'}
+                onPress={() => setShowVoucherModal(true)}
+              />
+            </View>
           </>
         )}
 
@@ -120,12 +177,36 @@ export default function CartScreen() {
       {!isEmpty && (
         <CartBottomBar
           allChecked={summary.allChecked}
-          totalPrice={summary.totalPrice}
+          totalPrice={finalPrice}
           selectedCount={summary.selectedCount}
           onToggleAll={handleToggleAll}
-          onCheckout={handleCheckout}
+          onCheckout={onCheckoutPress}
         />
       )}
+
+      <PlatformVoucherModal
+        visible={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        selectedVoucherCodes={selectedPlatformVouchers.map(v => v.code)}
+        onApplyVouchers={setSelectedPlatformVouchers}
+      />
+
+      <ShopVoucherModal
+        visible={!!activeShopVoucherShopId}
+        onClose={() => setActiveShopVoucherShopId(null)}
+        shopId={activeShopVoucherShopId ? parseInt(activeShopVoucherShopId) : undefined}
+        mode="select"
+        selectedVoucherId={activeShopVoucherShopId && selectedShopVouchers[activeShopVoucherShopId] ? selectedShopVouchers[activeShopVoucherShopId].id : undefined}
+        onSelectVoucher={(voucher) => {
+          if (activeShopVoucherShopId) {
+            setSelectedShopVouchers(prev => ({
+              ...prev,
+              [activeShopVoucherShopId]: voucher
+            }));
+          }
+          setActiveShopVoucherShopId(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
