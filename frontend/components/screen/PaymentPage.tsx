@@ -130,16 +130,15 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const totalQuantity = cartItems.reduce((sum, x) => sum + (x.quantity || 0), 0);
   const productPrice = cartItems.reduce((sum, x) => sum + (x.unitPrice || 0) * (x.quantity || 0), 0);
     
-  let shippingFee = 0;
-  if (shippingMethod === 'tietkiem') shippingFee = 16000;
-  else if (shippingMethod === 'nhanh') shippingFee = 35700;
-  else if (shippingMethod === 'hoatoc') shippingFee = 50000;
-  // 'mienshi' => 0
+  let currentShippingFee = shippingFee;
+  if (shippingMethod === 'tietkiem') currentShippingFee = 16000;
+  else if (shippingMethod === 'nhanh') currentShippingFee = 35700;
+  else if (shippingMethod === 'hoatoc') currentShippingFee = 50000;
+  // 'mienshi' => 0 (or use current state)
 
-  const shippingDiscount = shippingFee > 0 ? -Math.min(shippingFee, 19700) : 0;
-  const shippingDiscount = 0;
+  const shippingDiscount = currentShippingFee > 0 ? -Math.min(currentShippingFee, 19700) : 0;
   const insurancePrice = 579;
-  const finalShipping = shippingFee + shippingDiscount; 
+  const finalShipping = currentShippingFee + shippingDiscount; 
   
   const isFreeship = (v: any) => (v.code && v.code.includes('FREESHIP')) || (v.name && v.name.toLowerCase().includes('miễn phí'));
 
@@ -185,10 +184,9 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   if (insuranceSelected) finalTotal += insurancePrice;
   finalTotal = Math.max(0, finalTotal);
 
-  const savings = totalSaved;
   if (appliedVoucher) finalTotal -= appliedVoucher.discount;
-  finalTotal = Math.max(0, finalTotal); // Ensure total doesn't go negative
-  const savings = Math.abs(shippingDiscount) + (appliedVoucher?.discount || 0);
+  finalTotal = Math.max(0, finalTotal);
+  const savings = totalSaved + (appliedVoucher?.discount || 0);
 
   useEffect(() => {
     const estimateShippingFee = async () => {

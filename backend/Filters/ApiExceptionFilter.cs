@@ -17,7 +17,7 @@ public class ApiExceptionFilter : IExceptionFilter
             _ => (StatusCodes.Status500InternalServerError, "Internal server error"),
         };
 
-        context.Result = new ObjectResult(ApiResponses.Fail(message, traceId: traceId))
+        context.Result = new ObjectResult(ApiResponses.Fail(context.Exception.Message, traceId: traceId))
         {
             StatusCode = statusCode,
         };

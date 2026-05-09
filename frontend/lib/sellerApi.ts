@@ -25,6 +25,7 @@ export interface SellerProduct {
   stockQuantity: number;
   soldQuantity: number;
   status: string;
+  mainImageUrl?: string | null;
 }
 
 export interface SellerOrder {
@@ -99,6 +100,8 @@ export interface CreateSellerProductPayload {
   price: number;
   originalPrice?: number;
   stockQuantity: number;
+  weightGrams?: number;
+  imageUrls?: string[];
 }
 
 export interface CreateSellerProductResponse {
@@ -200,5 +203,38 @@ export const sellerApi = {
   getDashboardStats: async (): Promise<SellerDashboardStats> => {
     const response = await apiClient.get<SellerDashboardStats>('/api/seller/dashboard');
     return response.data;
+  },
+
+  updateProductStatus: async (productId: number, status: string): Promise<{ message: string }> => {
+    const response = await apiClient.patch<{ message: string }>(`/api/seller/products/${productId}/status`, {
+      status,
+    });
+    return response.data;
+  },
+
+  deleteProduct: async (productId: number): Promise<{ message: string }> => {
+    const response = await apiClient.delete<{ message: string }>(`/api/seller/products/${productId}`);
+    return response.data;
+  },
+
+  uploadImage: async (uri: string): Promise<string> => {
+    const formData = new FormData();
+    const fileName = uri.split('/').pop() || 'image.jpg';
+    const match = /\.(\w+)$/.exec(fileName);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    // @ts-ignore
+    formData.append('file', {
+      uri,
+      name: fileName,
+      type,
+    });
+
+    const response = await apiClient.post<{ url: string }>('/api/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.url;
   },
 };

@@ -16,58 +16,87 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
     [HttpGet("dashboard")]
     public async Task<ActionResult<SellerDashboardStats>> GetDashboardStats(CancellationToken cancellationToken)
     {
-        if (!this.TryGetCurrentUserId(out var userId))
-            return Unauthorized();
-
-        var shop = await db.Shops.FirstOrDefaultAsync(x => x.OwnerId == userId, cancellationToken);
-        if (shop is null)
-            return NotFound(new { message = "Không tìm thấy thông tin cửa hàng." });
-
-        var now = DateTime.UtcNow;
-        var today = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
-        var sevenDaysAgo = today.AddDays(-6); // Include today + 6 previous days
-
-        // 1. Basic Stats
-        var todayOrdersQuery = db.Orders.Where(o => o.ShopId == shop.Id && o.OrderedAt >= today);
-        var todayOrdersCount = await todayOrdersQuery.CountAsync(cancellationToken);
-        var todayRevenue = await todayOrdersQuery
-            .Where(o => o.PaymentStatus == PaymentStatus.paid)
-            .SumAsync(o => (decimal?)o.TotalAmount, cancellationToken) ?? 0;
-
-        // 2. Todo Stats
-        var ordersToShip = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.confirmed, cancellationToken);
-        var cancelledOrders = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.cancelled && o.OrderedAt >= sevenDaysAgo, cancellationToken);
-        var returnRequests = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.refunded && o.OrderedAt >= sevenDaysAgo, cancellationToken);
-        var outOfStockProducts = await db.Products.CountAsync(p => p.ShopId == shop.Id && p.StockQuantity <= 0, cancellationToken);
-
-        // 3. Revenue History (Last 7 days)
-        var revenueHistory = new List<decimal>();
-        for (int i = 6; i >= 0; i--)
+        try
         {
-            var dayStart = today.AddDays(-i);
-            var dayEnd = dayStart.AddDays(1);
-            var dayRevenue = await db.Orders
-                .Where(o => o.ShopId == shop.Id && o.PaymentStatus == PaymentStatus.paid && o.OrderedAt >= dayStart && o.OrderedAt < dayEnd)
+            if (!this.TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var shop = await db.Shops.FirstOrDefaultAsync(x => x.OwnerId == userId, cancellationToken);
+            if (shop is null)
+            {
+                // Auto-create a shop for the seller if missing
+                var user = await db.Users.FindAsync(new object[] { userId }, cancellationToken);
+                shop = new Shop
+                {
+                    OwnerId = userId,
+                    Name = user?.Username != null ? $"Cửa hàng của {user.Username}" : "Cửa hàng của tôi",
+                    Slug = $"shop-{userId}-{Guid.NewGuid().ToString()[..8]}",
+                    Status = ShopStatus.active,
+                    IsVerified = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                db.Shops.Add(shop);
+                await db.SaveChangesAsync(cancellationToken);
+                Console.WriteLine($"[Dashboard] Auto-created shop for user {userId}");
+            }
+
+            var now = DateTime.UtcNow;
+            var today = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
+            var sevenDaysAgo = today.AddDays(-6);
+
+            Console.WriteLine($"[Dashboard] Fetching stats for Shop {shop.Id} (Owner: {userId})");
+
+            // 1. Basic Stats
+            var todayOrdersQuery = db.Orders.Where(o => o.ShopId == shop.Id && o.OrderedAt >= today);
+            var todayOrdersCount = await todayOrdersQuery.CountAsync(cancellationToken);
+            var todayRevenue = await todayOrdersQuery
+                .Where(o => o.PaymentStatus == PaymentStatus.paid)
                 .SumAsync(o => (decimal?)o.TotalAmount, cancellationToken) ?? 0;
-            revenueHistory.Add(dayRevenue);
+
+            // 2. Todo Stats
+            var ordersToShip = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.confirmed, cancellationToken);
+            var cancelledOrders = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.cancelled && o.OrderedAt >= sevenDaysAgo, cancellationToken);
+            var returnRequests = await db.Orders.CountAsync(o => o.ShopId == shop.Id && o.Status == OrderStatus.refunded && o.OrderedAt >= sevenDaysAgo, cancellationToken);
+            var outOfStockProducts = await db.Products.CountAsync(p => p.ShopId == shop.Id && p.StockQuantity <= 0, cancellationToken);
+
+            // 3. Revenue History (Last 7 days)
+            var revenueHistory = new List<decimal>();
+            for (int i = 6; i >= 0; i--)
+            {
+                var dayStart = today.AddDays(-i);
+                var dayEnd = dayStart.AddDays(1);
+                var dayRevenue = await db.Orders
+                    .AsNoTracking()
+                    .Where(o => o.ShopId == shop.Id && o.PaymentStatus == PaymentStatus.paid && o.OrderedAt >= dayStart && o.OrderedAt < dayEnd)
+                    .Select(o => (decimal?)o.TotalAmount)
+                    .SumAsync(cancellationToken) ?? 0;
+                revenueHistory.Add(dayRevenue);
+            }
+
+            var response = new SellerDashboardStats(
+                ShopName: shop.Name,
+                TodayRevenue: todayRevenue,
+                TodayOrders: todayOrdersCount,
+                ConversionRate: 3.8m, // Mock for now
+                AverageOrderValue: todayOrdersCount > 0 ? todayRevenue / todayOrdersCount : 0,
+                RevenueHistory: revenueHistory,
+                Todo: new SellerTodoStats(
+                    OrdersToShip: ordersToShip,
+                    CancelledOrders: cancelledOrders,
+                    ReturnRequests: returnRequests,
+                    OutOfStockProducts: outOfStockProducts
+                )
+            );
+
+            return Ok(response);
         }
-
-        var response = new SellerDashboardStats(
-            ShopName: shop.Name,
-            TodayRevenue: todayRevenue,
-            TodayOrders: todayOrdersCount,
-            ConversionRate: 3.8m, // Mock for now
-            AverageOrderValue: todayOrdersCount > 0 ? todayRevenue / todayOrdersCount : 0,
-            RevenueHistory: revenueHistory,
-            Todo: new SellerTodoStats(
-                OrdersToShip: ordersToShip,
-                CancelledOrders: cancelledOrders,
-                ReturnRequests: returnRequests,
-                OutOfStockProducts: outOfStockProducts
-            )
-        );
-
-        return Ok(response);
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DashboardError] {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+            return StatusCode(500, new { message = "Lỗi khi lấy dữ liệu dashboard.", error = ex.Message });
+        }
     }
 
     [HttpPost("register")]
@@ -106,6 +135,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 x.StockQuantity,
                 x.SoldQuantity,
                 x.Status,
+                MainImageUrl = x.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() 
+                               ?? x.Images.OrderBy(i => i.SortOrder).Select(i => i.ImageUrl).FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
@@ -137,6 +168,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             Price = body.Price,
             OriginalPrice = body.OriginalPrice,
             StockQuantity = body.StockQuantity,
+            WeightGrams = body.WeightGrams,
             SoldQuantity = 0,
             Rating = 0,
             TotalReviews = 0,
@@ -144,6 +176,17 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             CreatedAt = now,
             UpdatedAt = now,
         };
+
+        if (body.ImageUrls != null && body.ImageUrls.Count > 0)
+        {
+            product.Images = body.ImageUrls.Select((url, index) => new ProductImage
+            {
+                ImageUrl = url,
+                IsMain = index == 0,
+                SortOrder = index,
+                CreatedAt = now
+            }).ToList();
+        }
 
         db.Products.Add(product);
         shop.TotalProducts += 1;
@@ -355,6 +398,58 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             .ToListAsync(cancellationToken);
 
         return Ok(new { totalRevenue, monthly });
+    }
+
+    [HttpPatch("products/{id:long}/status")]
+    public async Task<IActionResult> UpdateProductStatus(long id, [FromBody] UpdateProductStatusRequest body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var product = await db.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (product is null)
+            return NotFound(new { message = "Không tìm thấy sản phẩm." });
+
+        var isSellerOfProduct = await db.Shops.AnyAsync(
+            x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
+        if (!isSellerOfProduct)
+            return Forbid();
+
+        product.Status = body.Status;
+        product.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { message = "Cập nhật trạng thái sản phẩm thành công." });
+    }
+
+    [HttpDelete("products/{id:long}")]
+    public async Task<IActionResult> DeleteProduct(long id, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var product = await db.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (product is null)
+            return NotFound(new { message = "Không tìm thấy sản phẩm." });
+
+        var isSellerOfProduct = await db.Shops.AnyAsync(
+            x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
+        if (!isSellerOfProduct)
+            return Forbid();
+
+        db.Products.Remove(product);
+
+        // Update shop total products
+        var shop = await db.Shops.FirstOrDefaultAsync(x => x.Id == product.ShopId, cancellationToken);
+        if (shop != null)
+        {
+            shop.TotalProducts = Math.Max(0, shop.TotalProducts - 1);
+            shop.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { message = "Xóa sản phẩm thành công." });
     }
 }
 

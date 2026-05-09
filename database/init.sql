@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS shops (
   total_reviews INTEGER DEFAULT 0,
   total_products INTEGER DEFAULT 0,
   status shop_status DEFAULT 'active',
+  type VARCHAR(20) DEFAULT 'individual',
   is_verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

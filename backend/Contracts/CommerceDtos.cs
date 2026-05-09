@@ -235,14 +235,32 @@ public class CreateShopRequest
     public string? Email { get; set; }
 }
 
-public record CreateSellerProductRequest(
-    [property: Range(1, long.MaxValue)] long CategoryId,
-    [property: Required, MaxLength(255)] string Name,
-    [property: Required, MaxLength(255), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")] string Slug,
-    [property: MaxLength(2000)] string? Description,
-    [property: Range(typeof(decimal), "0.01", "999999999")] decimal Price,
-    decimal? OriginalPrice,
-    [property: Range(0, 1000000)] int StockQuantity);
+public class CreateSellerProductRequest
+{
+    [Range(1, long.MaxValue)]
+    public long CategoryId { get; set; }
+
+    [Required, MaxLength(255)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, MaxLength(255), RegularExpression("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal Price { get; set; }
+
+    public decimal? OriginalPrice { get; set; }
+
+    [Range(0, 1000000)]
+    public int StockQuantity { get; set; }
+
+    public int? WeightGrams { get; set; }
+
+    public List<string>? ImageUrls { get; set; }
+}
 
 public record ShopResponse(
     long Id,
@@ -313,6 +331,12 @@ public class UpdateSellerOrderStatusRequest
 
     [MaxLength(500)]
     public string? Note { get; set; }
+}
+
+public class UpdateProductStatusRequest
+{
+    [Required]
+    public ProductStatus Status { get; set; }
 }
 
 public class RejectShopRequest

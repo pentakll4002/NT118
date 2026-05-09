@@ -1,6 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { FilterTab, filterTabs } from '../../data/mockProducts';
+type FilterTab = 'all' | 'live' | 'sold_out' | 'reviewing';
+
+const filterTabs: { key: FilterTab; label: string }[] = [
+  { key: 'all', label: 'TẤT CẢ' },
+  { key: 'live', label: 'ĐANG BÁN' },
+  { key: 'sold_out', label: 'HẾT HÀNG' },
+  { key: 'reviewing', label: 'CHỜ DUYỆT' },
+];
 
 // ============================
 // Props

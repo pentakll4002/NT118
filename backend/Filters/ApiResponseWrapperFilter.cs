@@ -22,16 +22,25 @@ public class ApiResponseWrapperFilter : IAsyncResultFilter
                 }
                 else
                 {
-                    var message = statusCode switch
+                    string? message = null;
+                    if (value is { } && value.GetType().GetProperty("message") is { } prop)
                     {
-                        StatusCodes.Status400BadRequest => "Bad request",
-                        StatusCodes.Status401Unauthorized => "Unauthorized",
-                        StatusCodes.Status403Forbidden => "Forbidden",
-                        StatusCodes.Status404NotFound => "Not found",
-                        StatusCodes.Status409Conflict => "Conflict",
-                        _ => "Request failed",
-                    };
-                    objectResult.Value = ApiResponses.Fail(message, value, traceId);
+                        message = prop.GetValue(value)?.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(message))
+                    {
+                        message = statusCode switch
+                        {
+                            StatusCodes.Status400BadRequest => "Bad request",
+                            StatusCodes.Status401Unauthorized => "Unauthorized",
+                            StatusCodes.Status403Forbidden => "Forbidden",
+                            StatusCodes.Status404NotFound => "Not found",
+                            StatusCodes.Status409Conflict => "Conflict",
+                            _ => "Request failed",
+                        };
+                    }
+                    objectResult.Value = ApiResponses.Fail(message!, value, traceId);
                 }
             }
         }

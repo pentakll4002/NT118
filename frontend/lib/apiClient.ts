@@ -20,10 +20,18 @@ function defaultBaseUrl(): string {
   if (fromConfig) return fromConfig.replace(/\/$/, '');
 
   const lanHost = inferredDevApiHost();
-  if (lanHost) return `http://${lanHost}:5058`;
+  let url = 'http://127.0.0.1:5058';
 
-  if (Platform.OS === 'android') return 'http://10.0.2.2:5058';
-  return 'http://127.0.0.1:5058';
+  if (lanHost) {
+    url = `http://${lanHost}:5058`;
+  } else if (Platform.OS === 'android') {
+    // 10.0.2.2 is for standard Android Emulator
+    // 10.0.3.2 is for Genymotion/LDPlayer in some cases
+    url = 'http://10.0.2.2:5058'; 
+  }
+
+  console.log(`[API] Base URL resolved to: ${url}`);
+  return url;
 }
 
 export const API_BASE_URL = defaultBaseUrl();
@@ -73,7 +81,17 @@ apiClient.interceptors.response.use(
       console.log('<<< Validation Errors:', JSON.stringify(data.errors, null, 2));
     }
     let message = `Không kết nối được máy chủ (${API_BASE_URL}). Bật backend cổng 5058 hoặc đặt EXPO_PUBLIC_API_URL.`;
-    if (typeof data?.message === 'string') message = data.message;
+    if (typeof data?.message === 'string') {
+      message = data.message;
+      if (data.errors && typeof data.errors === 'object') {
+        const firstError = Object.values(data.errors)[0];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+          message += `: ${firstError[0]}`;
+        }
+      } else if ((data as any).error) {
+        message += ` (${(data as any).error})`;
+      }
+    }
     else if (typeof data?.title === 'string') message = data.title;
     else if (typeof err.message === 'string' && err.message.length > 0) message = err.message;
     return Promise.reject(new Error(message));

@@ -19,7 +19,12 @@ public static class DotEnvLoader
 
             var key = line[..separator].Trim();
             var value = line[(separator + 1)..].Trim().Trim('"');
-            Environment.SetEnvironmentVariable(key, value);
+            
+            // Only set if not already present (e.g. from Docker environment)
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+            {
+                Environment.SetEnvironmentVariable(key, value);
+            }
         }
     }
 }

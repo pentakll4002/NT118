@@ -1,13 +1,13 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  SafeAreaView, 
-  StatusBar, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
   RefreshControl,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '../components/Header';
@@ -20,13 +20,24 @@ import { Ionicons } from '@expo/vector-icons';
 
 const DashboardScreen: React.FC = () => {
   const router = useRouter();
-  const { stats, loading, refreshing, error, onRefresh, retry } = useSellerDashboard();
-  const hasBusinessData = !!stats && (stats.todayOrders > 0 || stats.todayRevenue > 0);
+  const { stats, loading, refreshing, error, onRefresh, retry } =
+    useSellerDashboard();
+  const hasBusinessData =
+    !!stats && (stats.todayOrders > 0 || stats.todayRevenue > 0);
+
+  React.useEffect(() => {
+    if (error) {
+      console.error('[DashboardScreen] Connection Error:', error);
+    }
+  }, [error]);
 
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header shopName="Đang tải..." onBackPress={() => router.replace('/(tabs)/settings')} />
+        <Header
+          shopName='Đang tải...'
+          onBackPress={() => router.replace('/(tabs)/settings')}
+        />
         <View style={styles.skeletonContainer}>
           <View style={styles.skeletonHeader} />
           <View style={styles.skeletonGrid}>
@@ -48,10 +59,15 @@ const DashboardScreen: React.FC = () => {
   if (error && !stats) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header shopName="Lỗi" onBackPress={() => router.replace('/(tabs)/settings')} />
+        <Header
+          shopName='Lỗi'
+          onBackPress={() => router.replace('/(tabs)/settings')}
+        />
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#e74c3c" />
-          <Text style={styles.errorText}>{error}</Text>
+          <Ionicons name='alert-circle-outline' size={64} color='#e74c3c' />
+          <Text style={styles.errorText}>
+            {error || 'Không thể kết nối đến máy chủ'}
+          </Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => retry()}>
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
@@ -63,45 +79,59 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
-      <Header 
-        shopName={stats?.shopName || "Cửa hàng của tôi"} 
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+
+      <Header
+        shopName={stats?.shopName || 'Cửa hàng của tôi'}
         onBackPress={() => router.replace('/(tabs)/settings')}
       />
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#e74c3c']} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#e74c3c']}
+          />
         }
       >
         <BusinessInsights stats={stats} loading={loading} />
-        
+
         <TodoList
           todoStats={stats?.todo}
-          onItemPress={(target) => router.push(`/seller-orders?filter=${target}` as any)}
+          onItemPress={(target) =>
+            router.push(`/seller-orders?filter=${target}` as any)
+          }
         />
 
         {!hasBusinessData && (
           <View style={styles.emptyStateCard}>
-            <Ionicons name="storefront-outline" size={48} color="#95a5a6" />
-            <Text style={styles.emptyStateTitle}>Shop của bạn đang chờ đơn đầu tiên</Text>
-            <Text style={styles.emptyStateText}>
-              Hãy thêm sản phẩm và bật khuyến mãi để bắt đầu có doanh thu ngay hôm nay.
+            <Ionicons name='storefront-outline' size={48} color='#95a5a6' />
+            <Text style={styles.emptyStateTitle}>
+              Shop của bạn đang chờ đơn đầu tiên
             </Text>
-            <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/seller-products')}>
-              <Text style={styles.emptyStateButtonText}>Thêm sản phẩm ngay</Text>
+            <Text style={styles.emptyStateText}>
+              Hãy thêm sản phẩm và bật khuyến mãi để bắt đầu có doanh thu ngay
+              hôm nay.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => router.push('/seller-products')}
+            >
+              <Text style={styles.emptyStateButtonText}>
+                Thêm sản phẩm ngay
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Campaign Banner */}
-        <CampaignCard 
-          title="Đăng ký Flash Sale mùa hè"
-          description="Tăng hiển thị shop lên đến 40% bằng cách tham gia sự kiện flash sale lớn nhất năm."
-          buttonText="Đăng ký ngay"
+        <CampaignCard
+          title='Đăng ký Flash Sale mùa hè'
+          description='Tăng hiển thị shop lên đến 40% bằng cách tham gia sự kiện flash sale lớn nhất năm.'
+          buttonText='Đăng ký ngay'
         />
 
         <View style={styles.footerSpacing} />

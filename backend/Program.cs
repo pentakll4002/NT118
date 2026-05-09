@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 DotEnvLoader.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
 
@@ -41,6 +43,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         npgsql.MapEnum<UserStatus>("user_status");
         npgsql.MapEnum<GenderType>("gender_type");
         npgsql.MapEnum<ShopStatus>("shop_status");
+        npgsql.MapEnum<ShopType>("shop_type");
         npgsql.MapEnum<ProductStatus>("product_status");
         npgsql.MapEnum<CategoryStatus>("category_status");
         npgsql.MapEnum<OrderStatus>("order_status");
@@ -147,9 +150,56 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+    var seedNow = DateTime.UtcNow;
 
-    // Database schema is provisioned via database/init.sql in this repo.
-    // Avoid EnsureCreated() here because it can create a schema that diverges from migrations.
+    Console.WriteLine("🚀 [Seed] Starting database initialization...");
+    try
+    {
+        db.Database.EnsureCreated();
+        var accounts = new[]
+        {
+            new { Email = "admin@nt118.com", Username = "admin", Role = UserRole.admin, Password = "admin123", FullName = "System Administrator" },
+            new { Email = "buyer@nt118.com", Username = "buyer", Role = UserRole.buyer, Password = "buyer123", FullName = "Default Buyer" },
+            new { Email = "seller@shopeelite.com", Username = "seller", Role = UserRole.seller, Password = "seller", FullName = "Shopee Elite Seller" }
+        };
+
+        foreach (var acc in accounts)
+        {
+            var seedUser = db.Users.FirstOrDefault(u => u.Email == acc.Email);
+            if (seedUser == null)
+            {
+                seedUser = new User
+                {
+                    Email = acc.Email,
+                    Username = acc.Username,
+                    Role = acc.Role,
+                    Status = UserStatus.active,
+                    CreatedAt = seedNow,
+                    UpdatedAt = seedNow
+                };
+                seedUser.PasswordHash = hasher.HashPassword(seedUser, acc.Password);
+                db.Users.Add(seedUser);
+                db.SaveChanges();
+
+                db.UserProfiles.Add(new UserProfile
+                {
+                    UserId = seedUser.Id,
+                    FullName = acc.FullName,
+                    CreatedAt = seedNow,
+                    UpdatedAt = seedNow,
+                });
+                db.SaveChanges();
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"🔍 [Seed] Inner Error: {ex.InnerException.Message}");
+        }
+    }
 
     // Create enums if they don't exist
     db.Database.ExecuteSqlRaw(@"
@@ -180,6 +230,12 @@ using (var scope = app.Services.CreateScope())
         -- Ensure 'pending' value exists in shop_status enum (for existing databases)
         DO $$ BEGIN
             ALTER TYPE shop_status ADD VALUE IF NOT EXISTS 'pending' BEFORE 'active';
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE shop_type AS ENUM ('individual', 'business');
         EXCEPTION
             WHEN duplicate_object THEN null;
         END $$;
@@ -231,7 +287,8 @@ using (var scope = app.Services.CreateScope())
             ADD COLUMN IF NOT EXISTS formatted_address VARCHAR(500);
 
         ALTER TABLE shops
-            ADD COLUMN IF NOT EXISTS pickup_address VARCHAR(500);
+            ADD COLUMN IF NOT EXISTS pickup_address VARCHAR(500),
+            ADD COLUMN IF NOT EXISTS type shop_type DEFAULT 'individual';
     ");
 
     // Apply pending migrations only if the database is already managed by EF migrations.
@@ -326,19 +383,7 @@ using (var scope = app.Services.CreateScope())
                                     }
                                 }
                             }
-                            if (batch.Count >= 500)
-                            {
-                                db.Addresses.AddRange(batch);
-                                db.SaveChanges();
-                                batch.Clear();
-                            }
                         }
-                    }
-                    if (batch.Count >= 500)
-                    {
-                        db.Addresses.AddRange(batch);
-                        db.SaveChanges();
-                        batch.Clear();
                     }
                 }
 
@@ -348,70 +393,70 @@ using (var scope = app.Services.CreateScope())
                     db.SaveChanges();
                 }
 
-                Console.WriteLine($"Seeded {count} address rows from data.json");
+                Console.WriteLine($"✅ [Seed] Successfully seeded {count} address rows.");
             }
             else
             {
-                Console.WriteLine("WARNING: data.json not found, address table is empty");
+                Console.WriteLine("⚠️ [Seed] WARNING: data.json not found, address table is empty");
             }
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error seeding address data: {ex.Message}");
-    }
-
-    // ── Seed admin account ──────────────────────────────────────
-    try
-    {
-        var adminEmail = "admin@shopeelite.com";
-        if (!db.Users.Any(u => u.Email == adminEmail))
-        {
-            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
-            var now = DateTime.UtcNow;
-            var adminUser = new User
-            {
-                Email = adminEmail,
-                Username = "admin",
-                Role = UserRole.admin,
-                Status = UserStatus.active,
-                CreatedAt = now,
-                UpdatedAt = now,
-            };
-            adminUser.PasswordHash = hasher.HashPassword(adminUser, "Admin@123456");
-            db.Users.Add(adminUser);
-            db.SaveChanges();
-
-            // Create profile for admin
-            db.UserProfiles.Add(new UserProfile
-            {
-                UserId = adminUser.Id,
-                FullName = "System Admin",
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
-            db.SaveChanges();
-
-            Console.WriteLine($"✅ Admin account seeded: {adminEmail} / Admin@123456");
         }
         else
         {
-            // Ensure existing admin has the admin role
-            var existingAdmin = db.Users.FirstOrDefault(u => u.Email == adminEmail);
-            if (existingAdmin != null && existingAdmin.Role != UserRole.admin)
-            {
-                existingAdmin.Role = UserRole.admin;
-                existingAdmin.UpdatedAt = DateTime.UtcNow;
-                db.SaveChanges();
-                Console.WriteLine($"✅ Existing user {adminEmail} promoted to admin.");
-            }
+            Console.WriteLine("ℹ️ [Seed] Addresses already seeded, skipping.");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error seeding admin: {ex.Message}");
+        Console.WriteLine($"❌ [Seed] Error seeding address data: {ex.Message}");
     }
 
+    // Ensure shops table has required columns
+    db.Database.ExecuteSqlRaw(@"
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='business_hours') THEN
+                ALTER TABLE shops ADD COLUMN business_hours VARCHAR(200);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='pickup_address') THEN
+                ALTER TABLE shops ADD COLUMN pickup_address VARCHAR(500);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='type') THEN
+                ALTER TABLE shops ADD COLUMN type VARCHAR(20) DEFAULT 'individual';
+            END IF;
+        END $$;
+    ");
+
+    // Seed a default shop for the seller account if missing
+    try
+    {
+        var sellerUser = db.Users.FirstOrDefault(u => u.Email == "seller@shopeelite.com");
+        if (sellerUser != null && !db.Shops.Any(s => s.OwnerId == sellerUser.Id))
+        {
+            var now = DateTime.Now;
+                db.Shops.Add(new Shop
+                {
+                    OwnerId = sellerUser.Id,
+                    Name = "Shopee Elite Store",
+                    Slug = "shopee-elite-store",
+                    Description = "Cửa hàng bán lẻ uy tín hàng đầu, chuyên cung cấp các sản phẩm chất lượng.",
+                    Status = ShopStatus.active,
+                    Type = ShopType.individual,
+                    IsVerified = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    BusinessHours = "08:00 - 22:00",
+                    PickupAddress = "123 Đường ABC, Quận 1, TP. HCM",
+                    Email = "seller@shopeelite.com",
+                    Phone = "0901234567"
+                });
+            db.SaveChanges();
+            Console.WriteLine("✅ Seeded default shop for seller@shopeelite.com");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding shop: {ex.Message}");
+    }
 
     // Create wishlist tables if they don't exist
     db.Database.ExecuteSqlRaw(@"

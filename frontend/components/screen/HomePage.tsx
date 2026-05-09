@@ -295,8 +295,15 @@ const HomePage = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} isHorizontal={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
+            {featuredProducts.map((product, index) => (
+              <ProductCard 
+                key={`featured-${product.id}-${index}`} 
+                product={product} 
+                isHorizontal={true} 
+                onPress={handleProductPress} 
+                isFavorited={favoriteIds.has(Number(product.id))} 
+                onToggleFavorite={handleToggleFavorite} 
+              />
             ))}
           </ScrollView>
         )}
@@ -335,8 +342,15 @@ const HomePage = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {newestProducts.map((product) => (
-              <ProductCard key={product.id} product={product} isHorizontal={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
+            {newestProducts.map((product, index) => (
+              <ProductCard 
+                key={`newest-${product.id}-${index}`} 
+                product={product} 
+                isHorizontal={true} 
+                onPress={handleProductPress} 
+                isFavorited={favoriteIds.has(Number(product.id))} 
+                onToggleFavorite={handleToggleFavorite} 
+              />
             ))}
           </ScrollView>
         )}
@@ -368,13 +382,13 @@ const HomePage = () => {
           <>
             <View style={styles.masonryContainer}>
               <View style={[styles.column, { width: (width - 40) / 2 }]}>
-                {suggestedProducts.filter((_, i) => i % 2 === 0).map((product) => (
-                  <ProductCard key={product.id} product={product} isMasonry={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
+                {suggestedProducts.filter((_, i) => i % 2 === 0).map((product, index) => (
+                  <ProductCard key={`suggested-l-${product.id}-${index}`} product={product} isMasonry={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
                 ))}
               </View>
               <View style={[styles.column, { width: (width - 40) / 2 }]}>
-                {suggestedProducts.filter((_, i) => i % 2 !== 0).map((product) => (
-                  <ProductCard key={product.id} product={product} isMasonry={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
+                {suggestedProducts.filter((_, i) => i % 2 !== 0).map((product, index) => (
+                  <ProductCard key={`suggested-r-${product.id}-${index}`} product={product} isMasonry={true} onPress={handleProductPress} isFavorited={favoriteIds.has(Number(product.id))} onToggleFavorite={handleToggleFavorite} />
                 ))}
               </View>
             </View>

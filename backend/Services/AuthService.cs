@@ -91,13 +91,21 @@ public class AuthService(
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(request.Password))
             throw new InvalidOperationException("Email và mật khẩu là bắt buộc.");
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken)
-            ?? throw new InvalidOperationException("Email hoặc mật khẩu không đúng.");
-
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        if (user == null)
+        {
+            Console.WriteLine($"[LoginError] User not found: {email}");
+            throw new InvalidOperationException("Email hoặc mật khẩu không đúng.");
+        }
+            
         var verify = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (verify == PasswordVerificationResult.Failed)
+        {
+            Console.WriteLine($"[LoginError] Password verification failed for: {email}");
             throw new InvalidOperationException("Email hoặc mật khẩu không đúng.");
+        }
 
+        Console.WriteLine($"[LoginSuccess] User logged in: {email} (Role: {user.Role})");
         return CreateAuthResponse(user);
     }
 

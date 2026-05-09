@@ -39,20 +39,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - backend_uploads:/app/wwwroot/uploads
 
-  ai:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.ai
-    container_name: nt118-ai
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      - MODEL_TYPE=groq
-      - GROQ_API_KEY=your_key_here
-    depends_on:
-      - backend
+  # ai:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile.ai
+  #   container_name: nt118-ai
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - MODEL_TYPE=groq
+  #     - GROQ_API_KEY=your_key_here
+  #   depends_on:
+  #     - backend
 
   db-seed:
     build:
@@ -66,3 +68,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:

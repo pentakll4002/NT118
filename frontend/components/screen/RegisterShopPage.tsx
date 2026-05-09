@@ -10,6 +10,19 @@ import AddressPickerModal from '../common/AddressPickerModal';
 import Map from './Map';
 import { forwardGeocodeNominatim } from '../../lib/geocode';
 
+// Utility function to centralize slug generation
+const generateSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/([^0-9a-z-\s])/g, '')
+    .replace(/(\s+)/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 export default function RegisterShopPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -53,18 +66,9 @@ export default function RegisterShopPage() {
           setEmail(profile.email || '');
           setPhone(profile.phone || '');
           
-          // Trigger slug generation manually for initial name
-          const n = profile.name || '';
-          const generatedSlug = n
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[đĐ]/g, 'd')
-            .replace(/([^0-9a-z-\s])/g, '')
-            .replace(/(\s+)/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-+|-+$/g, '');
-          setSlug(generatedSlug);
+          if (profile.name) {
+            setSlug(generateSlug(profile.name));
+          }
         }
       } catch (error) {
         console.log('Failed to fetch profile for pre-fill:', error);
@@ -78,16 +82,7 @@ export default function RegisterShopPage() {
   // Auto-generate slug from name
   const handleNameChange = (text: string) => {
     setName(text);
-    const generatedSlug = text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[đĐ]/g, 'd')
-      .replace(/([^0-9a-z-\s])/g, '')
-      .replace(/(\s+)/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    setSlug(generatedSlug);
+    setSlug(generateSlug(text));
   };
 
   // Auto geocode address
@@ -136,7 +131,8 @@ export default function RegisterShopPage() {
         if (field === 'logo') setLogoUrl(url);
         else setCoverImageUrl(url);
       } catch (error: any) {
-        Alert.alert('Lỗi', error.message || 'Không thể tải ảnh lên');
+        console.error("[UploadImage] Error:", error);
+        Alert.alert('Lỗi tải ảnh', error.message || 'Server không phản hồi hoặc sai định dạng file.');
       } finally {
         setLoading(false);
       }

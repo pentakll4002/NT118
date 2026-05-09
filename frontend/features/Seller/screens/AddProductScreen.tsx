@@ -6,6 +6,7 @@ import ProductImagesSection from '../components/addProduct/ProductImagesSection'
 import ProductDetailsSection from '../components/addProduct/ProductDetailsSection';
 import ProductPricingSection from '../components/addProduct/ProductPricingSection';
 import ProductShippingSection from '../components/addProduct/ProductShippingSection';
+import CategoryPickerModal from '../components/addProduct/CategoryPickerModal';
 import { sellerApi, SellerCategory } from '../../../lib/sellerApi';
 
 const AddProductScreen: React.FC = () => {
@@ -20,6 +21,7 @@ const AddProductScreen: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const keepDigitsOnly = (value: string) => value.replace(/\D/g, '');
   const formatNumber = (value: string) => {
@@ -55,7 +57,7 @@ const AddProductScreen: React.FC = () => {
         }
         const sorted = [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
         setCategories(sorted);
-        if (sorted.length > 0) {
+        if (sorted.length > 0 && !selectedCategoryId) {
           setSelectedCategoryId(sorted[0].id);
         }
       } catch (error: unknown) {
@@ -73,26 +75,20 @@ const AddProductScreen: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [selectedCategoryId]);
 
   const showComingSoon = (featureName: string) => {
     Alert.alert('Thông báo', `${featureName} sẽ được cập nhật ở bước tiếp theo.`);
   };
+
   const handlePickCategory = () => {
     if (categories.length === 0) {
       Alert.alert('Danh mục trống', 'Chưa có danh mục nào để chọn.');
       return;
     }
-
-    const options = categories.slice(0, 8).map((item) => ({
-      text: item.name,
-      onPress: () => setSelectedCategoryId(item.id),
-    }));
-    Alert.alert('Chọn danh mục', 'Vui lòng chọn danh mục sản phẩm', [
-      ...options,
-      { text: 'Đóng', style: 'cancel' },
-    ]);
+    setShowCategoryModal(true);
   };
+
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     const productPrice = parseNumber(price);
@@ -116,6 +112,19 @@ const AddProductScreen: React.FC = () => {
 
     try {
       setSubmitting(true);
+
+      // Upload images first if any
+      let uploadedUrls: string[] = [];
+      if (images.length > 0) {
+        uploadedUrls = await Promise.all(
+          images.map(async (uri) => {
+            // Only upload if it's a local uri (starts with file:// or content:// or /)
+            if (uri.startsWith('http')) return uri;
+            return await sellerApi.uploadImage(uri);
+          })
+        );
+      }
+
       await sellerApi.createProduct({
         categoryId: selectedCategoryId,
         name: trimmedName,
@@ -123,6 +132,8 @@ const AddProductScreen: React.FC = () => {
         description: description.trim() || undefined,
         price: productPrice,
         stockQuantity: productStock,
+        weightGrams: parseNumber(weight) || undefined,
+        imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
         originalPrice: undefined,
       });
       Alert.alert('Thành công', 'Đã thêm sản phẩm mới.', [
@@ -176,6 +187,14 @@ const AddProductScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <CategoryPickerModal
+        visible={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        categories={categories}
+        selectedCategoryId={selectedCategoryId}
+        onSelect={(cat) => setSelectedCategoryId(cat.id)}
+      />
     </SafeAreaView>
   );
 };

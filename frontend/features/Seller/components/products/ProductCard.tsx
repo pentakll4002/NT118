@@ -1,7 +1,16 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Product, ProductStatus } from '../../data/mockProducts';
+export type ProductStatus = 'live' | 'sold_out' | 'reviewing';
+
+export interface Product {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  stock: number;
+  status: ProductStatus;
+}
 
 
 /** Map status → display label */
@@ -26,10 +35,11 @@ const formatPrice = (price: number): string =>
 interface ProductCardProps {
   product: Product;
   onEdit?: (product: Product) => void;
-  onMore?: (product: Product) => void;
+  onHide?: (product: Product) => void;
+  onDelete?: (product: Product) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onMore }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onHide, onDelete }) => {
   const [showActions, setShowActions] = React.useState(false);
   const badge = statusColor[product.status];
 
@@ -85,10 +95,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onMore }) =>
           ) : (
             <View style={styles.expandedActions}>
               <View style={styles.actionGroup}>
-                <TouchableOpacity style={styles.hideButton} onPress={() => { setShowActions(false); /* onHide?.(product) */ }}>
-                  <Text style={styles.hideText}>TẠM ẨN</Text>
+                <TouchableOpacity
+                  style={styles.hideButton}
+                  onPress={() => {
+                    setShowActions(false);
+                    onHide?.(product);
+                  }}
+                >
+                  <Text style={styles.hideText}>
+                    {product.status === 'reviewing' ? 'HIỆN' : 'TẠM ẨN'}
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteButton} onPress={() => { setShowActions(false); /* onDelete?.(product) */ }}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => {
+                    setShowActions(false);
+                    onDelete?.(product);
+                  }}
+                >
                   <Text style={styles.deleteText}>XOÁ</Text>
                 </TouchableOpacity>
               </View>
