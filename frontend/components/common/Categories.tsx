@@ -19,6 +19,7 @@ interface CategoriesProps {
   categories: Category[];
   onSortPress?: () => void;
   onFilterPress?: () => void;
+  onCategoryPress?: (category: Category) => void;
 }
 
 const IconRenderer = ({ icon }: { icon: Category['icon'] }) => {
@@ -42,21 +43,11 @@ const IconRenderer = ({ icon }: { icon: Category['icon'] }) => {
   }
 };
 
-const Categories: React.FC<CategoriesProps> = ({ categories, onSortPress, onFilterPress }) => {
+const Categories: React.FC<CategoriesProps> = ({ categories, onSortPress, onFilterPress, onCategoryPress }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tính Năng Nổi Bật</Text>
-        <View style={styles.filterButtons}>
-          <TouchableOpacity style={styles.filterButton} onPress={onSortPress}>
-            <Text style={styles.filterText}>Sắp xếp</Text>
-            <Ionicons name="swap-vertical" size={14} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
-            <Text style={styles.filterText}>Lọc</Text>
-            <Feather name="filter" size={14} color="black" />
-          </TouchableOpacity>
-        </View>
       </View>
       <ScrollView 
         horizontal 
@@ -64,7 +55,12 @@ const Categories: React.FC<CategoriesProps> = ({ categories, onSortPress, onFilt
         contentContainerStyle={styles.scrollContent}
       >
         {categories.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.categoryItem}>
+          <TouchableOpacity 
+            key={item.id} 
+            style={styles.categoryItem} 
+            onPress={() => onCategoryPress?.(item)}
+            activeOpacity={0.7}
+          >
             <View style={[styles.imageContainer, item.bgColor ? { backgroundColor: item.bgColor } : null]}>
               {item.icon ? (
                 <IconRenderer icon={item.icon} />
@@ -97,33 +93,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Montserrat_700Bold',
     color: '#000',
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  filterText: {
-    fontSize: 12,
-    fontFamily: 'Montserrat_400Regular',
-    color: '#000',
-  },
-  filterIcon: {
-    width: 14,
-    height: 14,
   },
   scrollContent: {
     paddingHorizontal: 12,

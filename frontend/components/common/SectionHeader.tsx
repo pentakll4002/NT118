@@ -12,6 +12,9 @@ interface SectionHeaderProps {
   timerText?: string;
   icon?: string;
   isBlueVariant?: boolean;
+  showFilters?: boolean;
+  onSortPress?: () => void;
+  onFilterPress?: () => void;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -23,6 +26,9 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   timerText,
   icon = "time-outline",
   isBlueVariant = false,
+  showFilters = false,
+  onSortPress,
+  onFilterPress,
 }) => {
   if (isBlueVariant) {
     return (
@@ -36,10 +42,6 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
             </View>
           )}
         </View>
-        <TouchableOpacity style={styles.blueViewAllButton} onPress={onViewAllPress}>
-          <Text style={styles.blueViewAllText}>{viewAllText}</Text>
-          <Feather name="arrow-right" size={14} color="white" />
-        </TouchableOpacity>
       </View>
     );
   }
@@ -58,10 +60,18 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
           <Text style={styles.subtitleText}>{subtitle}</Text>
         )}
       </View>
-      <TouchableOpacity style={styles.viewAllButton} onPress={onViewAllPress}>
-        <Text style={styles.viewAllText}>{viewAllText}</Text>
-        <Ionicons name="arrow-forward" size={16} color="white" />
-      </TouchableOpacity>
+      {showFilters && (
+        <View style={styles.filterButtons}>
+          <TouchableOpacity style={styles.filterButton} onPress={onSortPress}>
+            <Text style={styles.filterText}>Sắp xếp</Text>
+            <Ionicons name="swap-vertical" size={14} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
+            <Text style={styles.filterText}>Lọc</Text>
+            <Feather name="filter" size={14} color="black" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -97,16 +107,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontFamily: 'Montserrat_400Regular',
-  },
-  blueViewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
   },
   blueViewAllText: {
     color: 'white',
@@ -145,21 +145,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: 'Montserrat_400Regular',
   },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'white',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    gap: 4,
-  },
   viewAllText: {
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Montserrat_600SemiBold',
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  filterText: {
+    fontSize: 12,
+    fontFamily: 'Montserrat_500Medium',
+    color: '#000',
   },
 });
 

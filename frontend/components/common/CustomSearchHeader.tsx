@@ -56,6 +56,13 @@ const CustomSearchHeader: React.FC<CustomSearchHeaderProps> = ({
           <Ionicons name="search" size={16} color="white" />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity 
+        style={styles.cartButton} 
+        onPress={() => router.push('/cart' as any)}
+      >
+        <Ionicons name="cart-outline" size={26} color="#4392F9" />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -98,6 +105,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 4,
+  },
+  cartButton: {
+    marginLeft: 12,
   },
 });
 
