@@ -1,8 +1,17 @@
+import sys
+import os
+
+# Add parent directory to path so Python can find 'suggest' module
+_parent_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from api import chat
 from api import products as products_api
+from api import suggest as suggest_api
 
 try:
     from api import upload
@@ -14,6 +23,15 @@ import config.setting as config
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ── Initialize PostgreSQL connection pool ──
+    try:
+        from db.connection import get_pool, close_pool
+        await get_pool()
+        print("✅ PostgreSQL connection pool ready")
+    except Exception as e:
+        print(f"⚠️  PostgreSQL pool init skipped (will use HTTP fallback): {e}")
+
+    # ── Initialize vector knowledge base ──
     try:
         from ingestion.ingest import DocumentIngester
         from vectorstore.create import get_vector_store
@@ -34,7 +52,15 @@ async def lifespan(app: FastAPI):
             print("Knowledge base already exists or file not found, skipping ingestion")
     except Exception as e:
         print(f"Warning: Auto-ingestion skipped: {e}")
+
     yield
+
+    # ── Shutdown: close DB pool ──
+    try:
+        from db.connection import close_pool
+        await close_pool()
+    except Exception:
+        pass
 
 app = FastAPI(
     title="ShopeeLite E-Commerce Chatbot API",
@@ -43,9 +69,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+_origins = [o.strip() for o in config.ALLOWED_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,6 +89,7 @@ if upload_available:
     app.include_router(upload.router)
 
 app.include_router(products_api.router)
+app.include_router(suggest_api.router)
 
 @app.get("/")
 async def root():

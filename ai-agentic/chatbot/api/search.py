@@ -44,9 +44,7 @@ JSON: {"q": "điện thoại pin trâu", "category": "điện thoại", "color":
             system_prompt=system_prompt
         )
         
-        # Parse JSON from response
         try:
-            # clean up markdown code blocks if any
             clean_text = response_text.replace('```json', '').replace('```', '').strip()
             parsed = json.loads(clean_text)
             
@@ -63,5 +61,4 @@ JSON: {"q": "điện thoại pin trâu", "category": "điện thoại", "color":
             
     except Exception as e:
         print(f"AI parse error: {e}")
-        # fallback
         return AISearchResponse(extracted_query=request.query)

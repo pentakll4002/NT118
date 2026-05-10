@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from llm.rag import RAGPipeline
 from vectorstore.create import get_vector_store
 import config.setting as config
 import re
+import os
 import httpx
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -29,9 +30,13 @@ class ChatRequest(BaseModel):
 
 
 class ProductCard(BaseModel):
-    id: int
+    id: Union[str, int]
     name: str
+    brand: Optional[str] = None
     price: float
+    original_price: Optional[float] = None
+    sale_price: Optional[float] = None
+    category: Optional[str] = None
     image: Optional[str] = None
     rating: Optional[float] = None
     deep_link: str
@@ -44,7 +49,7 @@ class ChatResponse(BaseModel):
     products: Optional[List[ProductCard]] = None
 
 
-BACKEND_URL = config.__dict__.get("BACKEND_URL", "http://localhost:5058")
+BACKEND_URL = config.BACKEND_URL
 
 PRODUCT_KEYWORDS = [
     "tim", "mua", "san pham", "sản phẩm", "tìm", "giá", "gia",
@@ -55,6 +60,11 @@ PRODUCT_KEYWORDS = [
     "recommend", "search", "suggest", "có gì", "co gi", "loại nào", "loai nao",
     "rẻ", "re", "tốt", "tot", "nên mua", "nen mua", "giảm giá", "giam gia",
     "khuyến mãi", "khuyen mai", "voucher",
+    "màn hình", "man hinh", "pc", "vga", "ssd", "ram", "cpu", "case",
+    "tản nhiệt", "tan nhiet", "chuột", "headphone", "earbuds",
+    "aoc", "asus", "msi", "lenovo", "dell", "hp", "acer", "samsung",
+    "gearvn", "machenike", "logitech", "razer", "corsair", "kingston",
+    "lg", "benq", "hyperx", "steelseries", "nzxt", "be quiet",
 ]
 
 
@@ -64,37 +74,264 @@ def is_product_query(message: str) -> bool:
     return any(kw in msg_lower for kw in PRODUCT_KEYWORDS)
 
 
-async def fetch_products_from_backend(query: str, max_results: int = 4) -> List[ProductCard]:
-    """Search products from the .NET backend."""
-    try:
-        params = {"q": query, "pageSize": max_results}
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            response = await client.get(f"{BACKEND_URL}/api/products", params=params)
-            response.raise_for_status()
+STOP_WORDS = {
+    "mua", "tim", "tìm", "giá", "gia", "duoi", "dưới", "tren", "trên",
+    "khoang", "khoảng", "chuyen", "chuyên", "chong", "chống", "nhe",
+    "nhẹ", "dep", "đẹp", "xin", "tot", "tốt", "nen", "nên", "co",
+    "có", "muon", "muốn", "một", "mot", "nhung", "nhưng", "cac",
+    "các", "hay", "giup", "giúp", "tu", "tư", "van", "vấn", "em",
+    "anh", "chi", "chị", "ban", "bạn", "toi", "tôi", "minh", "mình",
+    "cho", "vao", "vào", "ra", "cua", "của", "khong", "không",
+    "nay", "này", "do", "đó", "the", "thế", "thì", "biết", "biet",
+    "cần", "can", "bạn", "tư vấn", "tu van", "và", "hoặc", "hoac",
+    "được", "duoc", "về", "ve", "với", "voi", "trong", "ngoai",
+    "triệu", "trieu", "tr", "nghìn", "nghin", "k", "củ",
+}
 
-        data = response.json()
-        if isinstance(data, dict) and "data" in data and "success" in data:
-            data = data["data"]
+
+CATEGORY_MAP = {
+    "man hinh": "monitor", "màn hình": "monitor",
+    "laptop": "laptop",
+    "ban phim": "keyboard", "bàn phím": "keyboard",
+    "chuot": "mouse", "chuột": "mouse",
+    "tai nghe": "headset", "headphone": "headset",
+    "pc": "pc", "pc gaming": "pc",
+    "o cung": "storage", "ổ cứng": "storage", "ssd": "storage", "hdd": "storage",
+    "ram": "storage",
+    "vga": "gpu", "card do hoa": "gpu", "card đồ họa": "gpu",
+    "tan nhiet": "cooling", "tản nhiệt": "cooling",
+    "mainboard": "components",
+    "nguồn": "components", "psu": "components",
+    "case": "components",
+}
+
+
+def _extract_search_keywords(query: str) -> str:
+    """Extract meaningful keywords from natural language query."""
+    words = query.lower().split()
+    keywords = [w for w in words if w not in STOP_WORDS and len(w) > 1]
+    return " ".join(keywords) if keywords else query
+
+
+def _extract_category(query: str):
+    """Extract category filter from Vietnamese query."""
+    q = query.lower()
+    for vi_key, en_cat in CATEGORY_MAP.items():
+        if vi_key in q:
+            return en_cat
+    return None
+
+
+def _parse_price_filter(query: str):
+    """Extract price constraints from Vietnamese query."""
+    import re
+    max_price = None
+    min_price = None
+
+    under_match = re.search(r'(?:dưới|duoi)\s*([\d.]+)\s*(k|nghìn|triệu|tr|củ|trieu)?', query, re.IGNORECASE)
+    if under_match:
+        val = float(under_match.group(1))
+        unit = (under_match.group(2) or 'k').lower()
+        if unit in ('triệu', 'tr', 'trieu'):
+            val *= 1_000_000
+        elif unit in ('k', 'nghìn'):
+            val *= 1000
+        max_price = val
+
+    over_match = re.search(r'(?:trên|tren)\s*([\d.]+)\s*(k|nghìn|triệu|tr|củ|trieu)?', query, re.IGNORECASE)
+    if over_match:
+        val = float(over_match.group(1))
+        unit = (over_match.group(2) or 'k').lower()
+        if unit in ('triệu', 'tr', 'trieu'):
+            val *= 1_000_000
+        elif unit in ('k', 'nghìn'):
+            val *= 1000
+        min_price = val
+
+    return min_price, max_price
+
+
+KNOWN_BRANDS = [
+    "msi", "asus", "dell", "hp", "acer", "lenovo", "apple", "samsung",
+    "logitech", "razer", "corsair", "kingston", "lg", "benq", "aoc",
+    "hyperx", "steelseries", "nzxt", "machenike", "gearvn", "gigabyte",
+    "cooler master", "thermaltake", "seasonic", "deepcool", "lian li",
+    "western digital", "wd", "seagate", "crucial", "intel", "amd",
+]
+
+
+def _rule_based_parse(query: str) -> dict:
+    """Simple rule-based fallback parser."""
+    q_lower = query.lower()
+    words = q_lower.split()
+    keywords = [w for w in words if w not in STOP_WORDS and len(w) > 1]
+
+    category = _extract_category(query)
+    if category:
+        for vi_key in CATEGORY_MAP:
+            cat_words = vi_key.split()
+            keywords = [w for w in keywords if w not in cat_words]
+
+    # Detect brand
+    brand = None
+    for b in KNOWN_BRANDS:
+        if b in q_lower:
+            brand = b.upper() if len(b) <= 3 else b.title()
+            for bw in b.split():
+                keywords = [w for w in keywords if w != bw]
+            break
+
+    min_price, max_price = _parse_price_filter(query)
+    extracted_query = " ".join(keywords) if keywords else query
+
+    return {
+        "extracted_query": extracted_query,
+        "brand": brand,
+        "category": category,
+        "min_price": min_price,
+        "max_price": max_price,
+        "color": None,
+        "specs": [],
+    }
+
+
+async def fetch_products_from_backend(query: str, max_results: int = 4) -> List[ProductCard]:
+    """Search products - prefer direct PostgreSQL, fallback to HTTP core-service."""
+    try:
+        # Use ai-parse endpoint for robust parsing
+        parsed = {"extracted_query": _extract_search_keywords(query)}
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                parse_resp = await client.post(
+                    f"http://localhost:{config.API_PORT}/api/suggest/ai-parse",
+                    json={"query": query},
+                )
+                if parse_resp.status_code == 200:
+                    parsed = parse_resp.json()
+        except Exception as e:
+            print(f"[chat] ai-parse failed, using rules: {e}")
+            parsed = _rule_based_parse(query)
+
+        search_term = parsed.get("extracted_query", _extract_search_keywords(query))
+        category = parsed.get("category") or _extract_category(query)
+        min_price, max_price = parsed.get("min_price"), parsed.get("max_price")
+        if not min_price and not max_price:
+            min_price, max_price = _parse_price_filter(query)
+        color = parsed.get("color")
+        specs = parsed.get("specs", [])
+        brand_filter = parsed.get("brand")  # extracted brand name (e.g. "MSI")
+
+        # If brand detected, include it in the search term so ILIKE can match it
+        if brand_filter and brand_filter.lower() not in search_term.lower():
+            search_term = f"{brand_filter} {search_term}".strip()
+
+        # Remove category keywords from search term to avoid noise
+        if category:
+            for vi_key in CATEGORY_MAP:
+                search_term = search_term.replace(vi_key, "").strip()
+
+        print(f"[chat] Searching products: term='{search_term}', cat={category}, brand={brand_filter}, min={min_price}, max={max_price}, color={color}, specs={specs}")
 
         items = []
-        if isinstance(data, dict):
-            items = data.get("data", data.get("items", []))
-        elif isinstance(data, list):
-            items = data
+
+        # ── Try direct PostgreSQL first ──
+        try:
+            from db.queries import search_products as db_search
+            db_results = await db_search(
+                search=search_term,
+                brand=brand_filter,
+                min_price=float(min_price) if min_price else None,
+                max_price=float(max_price) if max_price else None,
+                limit=max_results * 3,
+            )
+            if db_results:
+                # Convert Decimal to float
+                for p in db_results:
+                    for key in ('price', 'original_price', 'rating', 'discount'):
+                        if key in p and p[key] is not None:
+                            p[key] = float(p[key])
+                items = db_results
+                print(f"[chat] Found {len(items)} products from PostgreSQL")
+        except Exception as e:
+            print(f"[chat] DB search failed, trying HTTP: {e}")
+
+        # ── Fallback to HTTP if DB returned nothing ──
+        if not items:
+            try:
+                params = {"search": search_term, "limit": max_results * 3}
+                if category:
+                    params["category"] = category
+                if min_price:
+                    params["min_price"] = min_price
+                if max_price:
+                    params["max_price"] = max_price
+                if color:
+                    params["color"] = color
+                if specs:
+                    params["specs"] = ",".join(specs)
+
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    response = await client.get(f"{BACKEND_URL}/api/v1/products", params=params)
+                    response.raise_for_status()
+
+                data = response.json()
+                if isinstance(data, dict) and "success" in data:
+                    data = data.get("data", {})
+
+                if isinstance(data, dict):
+                    items = data.get("products", data.get("data", data.get("items", [])))
+                elif isinstance(data, list):
+                    items = data
+
+                print(f"[chat] Found {len(items)} products from HTTP core-service")
+            except Exception as e:
+                print(f"[chat] HTTP fallback also failed: {e}")
+
+        # Post-filter by brand if requested
+        if brand_filter and items:
+            bf = brand_filter.lower()
+            items = [
+                it for it in items
+                if bf in (it.get("brand") or "").lower()
+                or bf in (it.get("title") or it.get("name") or "").lower()
+            ]
+            print(f"[chat] After brand filter '{brand_filter}': {len(items)} products")
 
         products = []
+
         for item in items[:max_results]:
+            product_id = item.get("id", 0)
+            name = item.get("title") or item.get("name", "")
+            price = item.get("sale_price") or item.get("price", 0)
+            image = item.get("image")
+            rating = item.get("rating")
+            brand = item.get("brand")
+            original_price = item.get("original_price")
+            sale_price = item.get("sale_price")
+            category = item.get("category") or item.get("category_name")
+
+            # Keep UUID string as-is; only convert numeric strings to int
+            if isinstance(product_id, str):
+                try:
+                    product_id = int(product_id)  # numeric string like "123"
+                except ValueError:
+                    pass  # real UUID — leave as string
+
             products.append(ProductCard(
-                id=item.get("id", 0),
-                name=item.get("name", ""),
-                price=item.get("price", 0),
-                image=item.get("image"),
-                rating=item.get("rating"),
-                deep_link=f"/product/{item.get('id', 0)}"
+                id=product_id,
+                name=name,
+                brand=brand,
+                price=float(price) if price else 0,
+                original_price=float(original_price) if original_price else None,
+                sale_price=float(sale_price) if sale_price else None,
+                category=category,
+                image=image,
+                rating=rating,
+                deep_link=f"/product/{product_id}"
             ))
         return products
     except Exception as e:
-        print(f"Failed to fetch products from backend: {e}")
+        print(f"Failed to fetch products: {e}")
         return []
 
 
@@ -124,6 +361,26 @@ async def chat(request: ChatRequest):
                     "content": msg.content
                 })
 
+        is_product = is_product_query(request.message)
+        products = None
+
+        if is_product:
+            products = await fetch_products_from_backend(request.message, max_results=4)
+
+        product_context = ""
+        if products and len(products) > 0:
+            product_context = "\n\nSan pham tim thay trong kho cua hang:\n"
+            for p in products:
+                brand_str = f", hang: {p.brand}" if p.brand else ""
+                cat_str = f", danh muc: {p.category}" if p.category else ""
+                price_str = f"{int(p.sale_price or p.price):,}d" if (p.sale_price or p.price) else "Lien he"
+                orig_str = f" (goc: {int(p.original_price):,}d)" if p.original_price and p.original_price != (p.sale_price or p.price) else ""
+                rating_str = f", danh gia: {p.rating}/5" if p.rating else ""
+                product_context += f"- {p.name}{brand_str}{cat_str}, gia: {price_str}{orig_str}{rating_str}, link: {p.deep_link}\n"
+            product_context += "Hay goi y nhung san pham tren cho khach, ke ten, hang, gia va kem link. Neu khong phu hop thi tu van them."
+
+        answer = None
+
         if request.use_rag:
             try:
                 rag_pipeline = get_rag_pipeline()
@@ -132,53 +389,51 @@ async def chat(request: ChatRequest):
                     conversation_history=history,
                     top_k=request.top_k
                 )
-                return ChatResponse(
-                    answer=result["answer"],
-                    sources=result.get("sources"),
-                    num_sources=result.get("num_sources", 0)
-                )
+                answer = result["answer"]
+                if product_context:
+                    answer += f"\n\nMình tìm thấy một số sản phẩm phù hợp, bạn xem bên dưới nhé!"
             except Exception as e:
                 print(f"RAG failed, falling back to direct LLM: {e}")
 
-        from llm.client import get_llm_client
-        try:
-            llm_client = get_llm_client(config.MODEL_TYPE)
-            answer = llm_client.chat(
-                user_message=request.message,
-                conversation_history=history,
-                system_prompt=ECOMMERCE_SYSTEM_PROMPT
-            )
-        except ValueError as e:
-            error_detail = str(e)
-            print(f"ValueError in chat: {error_detail}")
-            return ChatResponse(
-                answer="Xin loi ban, ShopAI tam thoi khong the ket noi. Vui long thu lai sau it phut nhe!",
-                sources=None,
-                num_sources=0
-            )
-        except ImportError as e:
-            error_detail = str(e)
-            print(f"ImportError in chat: {error_detail}")
-            return ChatResponse(
-                answer="He thong dang bao tri, ShopAI se quay lai som. Ban co the lien he hotline 1900-xxxx de duoc ho tro ngay!",
-                sources=None,
-                num_sources=0
-            )
-        except Exception as e:
-            error_detail = str(e)
-            traceback.print_exc()
-            print(f"LLM error: {error_detail}")
-            return ChatResponse(
-                answer="Xin loi ban, ShopAI dang gap su co ky thuat. Vui long thu lai sau hoac lien he bo phan ho tro qua hotline 1900-xxxx nhe!",
-                sources=None,
-                num_sources=0
-            )
+        if answer is None:
+            from llm.client import get_llm_client
+            try:
+                llm_client = get_llm_client(config.MODEL_TYPE)
+
+                system_prompt = ECOMMERCE_SYSTEM_PROMPT
+                if product_context:
+                    system_prompt += product_context
+
+                answer = llm_client.chat(
+                    user_message=request.message,
+                    conversation_history=history,
+                    system_prompt=system_prompt
+                )
+            except ValueError as e:
+                print(f"ValueError in chat: {e}")
+                return ChatResponse(
+                    answer="Xin loi ban, ShopAI tam thoi khong the ket noi. Vui long thu lai sau it phut nhe!",
+                    sources=None, num_sources=0, products=products
+                )
+            except ImportError as e:
+                print(f"ImportError in chat: {e}")
+                return ChatResponse(
+                    answer="He thong dang bao tri, ShopAI se quay lai som. Ban co the lien he hotline 1900-xxxx de duoc ho tro ngay!",
+                    sources=None, num_sources=0, products=products
+                )
+            except Exception as e:
+                traceback.print_exc()
+                print(f"LLM error: {e}")
+                return ChatResponse(
+                    answer="Xin loi ban, ShopAI dang gap su co ky thuat. Vui long thu lai sau hoac lien he bo phan ho tro qua hotline 1900-xxxx nhe!",
+                    sources=None, num_sources=0, products=products
+                )
 
         return ChatResponse(
             answer=answer,
             sources=None,
             num_sources=0,
-            products=None
+            products=products
         )
 
     except HTTPException:
