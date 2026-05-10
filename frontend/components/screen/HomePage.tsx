@@ -30,38 +30,7 @@ import { getProducts, getFeaturedProducts, ProductDTO, formatPrice, formatSold }
 import { getCategories, CategoryDTO } from '../../lib/categoryApi';
 import { userApi, UserProfileDTO } from '../../lib/userApi';
 
-const categories: Category[] = [
-  {
-    id: 1,
-    name: 'Thân Thiết',
-    icon: { library: 'MaterialCommunityIcons', name: 'medal-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 2,
-    name: 'Mã Giảm Giá',
-    icon: { library: 'MaterialCommunityIcons', name: 'ticket-percent-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 3,
-    name: 'Đồ Trẻ Em',
-    icon: { library: 'MaterialIcons', name: 'child-care', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 4,
-    name: 'Thời Trang',
-    icon: { library: 'Ionicons', name: 'shirt-outline', color: '#F73658', size: 26 },
-    bgColor: '#fff',
-  },
-  {
-    id: 5,
-    name: 'Quà Tặng',
-    icon: { library: 'MaterialCommunityIcons', name: 'gift-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-];
+
 
 function toCardProduct(dto: ProductDTO): Product {
   return {
@@ -327,18 +296,7 @@ const HomePage = () => {
           ))}
         </ScrollView>
 
-        <Categories 
-          categories={categories} 
-          onCategoryPress={(cat) => {
-            if (cat.id === 1) { // Thân Thiết
-              router.push('/(tabs)/settings' as any);
-            } else if (cat.id === 2) { // Mã Giảm Giá
-              router.push('/search-results?q=voucher' as any); // Hoặc trang khuyến mãi cụ thể
-            } else {
-              router.push(`/search-results?categoryId=${cat.id}` as any);
-            }
-          }}
-        />
+        {/* Categories section removed as requested */}
 
         <SectionHeader
           title="Deal Chớp Nhoáng"

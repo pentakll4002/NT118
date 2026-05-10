@@ -7,7 +7,10 @@ import ProductDetailsSection from '../components/addProduct/ProductDetailsSectio
 import ProductPricingSection from '../components/addProduct/ProductPricingSection';
 import ProductShippingSection from '../components/addProduct/ProductShippingSection';
 import CategoryPickerModal from '../components/addProduct/CategoryPickerModal';
-import { sellerApi, SellerCategory } from '../../../lib/sellerApi';
+import BrandPickerModal from '../components/addProduct/BrandPickerModal';
+import VariationEditorModal from '../components/addProduct/VariationEditorModal';
+import AddCategoryModal from '../components/addProduct/AddCategoryModal';
+import { sellerApi, SellerCategory, CreateProductVariantPayload } from '../../../lib/sellerApi';
 
 const AddProductScreen: React.FC = () => {
   const router = useRouter();
@@ -21,7 +24,13 @@ const AddProductScreen: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [brand, setBrand] = useState<string>('');
+  const [variants, setVariants] = useState<CreateProductVariantPayload[]>([]);
+  
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showVariationModal, setShowVariationModal] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
 
   const keepDigitsOnly = (value: string) => value.replace(/\D/g, '');
   const formatNumber = (value: string) => {
@@ -46,36 +55,29 @@ const AddProductScreen: React.FC = () => {
     [categories, selectedCategoryId],
   );
 
-  useEffect(() => {
-    let mounted = true;
-    const loadCategories = async () => {
-      try {
-        setLoadingCategories(true);
-        const list = await sellerApi.getCategories();
-        if (!mounted) {
-          return;
-        }
-        const sorted = [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
-        setCategories(sorted);
-        if (sorted.length > 0 && !selectedCategoryId) {
-          setSelectedCategoryId(sorted[0].id);
-        }
-      } catch (error: unknown) {
-        if (mounted) {
-          Alert.alert('Không tải được danh mục', error instanceof Error ? error.message : 'Đã xảy ra lỗi.');
-        }
-      } finally {
-        if (mounted) {
-          setLoadingCategories(false);
-        }
+  const loadCategories = async (selectLatest = false) => {
+    try {
+      setLoadingCategories(true);
+      const list = await sellerApi.getCategories();
+      const sorted = [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+      setCategories(sorted);
+      if (selectLatest && sorted.length > 0) {
+        // Find the one with highest ID (most likely the new one)
+        const latest = [...sorted].sort((a, b) => b.id - a.id)[0];
+        setSelectedCategoryId(latest.id);
+      } else if (sorted.length > 0 && !selectedCategoryId) {
+        setSelectedCategoryId(sorted[0].id);
       }
-    };
+    } catch (error: unknown) {
+      Alert.alert('Không tải được danh mục', error instanceof Error ? error.message : 'Đã xảy ra lỗi.');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
+  useEffect(() => {
     loadCategories();
-    return () => {
-      mounted = false;
-    };
-  }, [selectedCategoryId]);
+  }, []);
 
   const showComingSoon = (featureName: string) => {
     Alert.alert('Thông báo', `${featureName} sẽ được cập nhật ở bước tiếp theo.`);
@@ -133,6 +135,8 @@ const AddProductScreen: React.FC = () => {
         price: productPrice,
         stockQuantity: productStock,
         weightGrams: parseNumber(weight) || undefined,
+        brand: brand || undefined,
+        variants: variants.length > 0 ? variants : undefined,
         imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
         originalPrice: undefined,
       });
@@ -160,13 +164,16 @@ const AddProductScreen: React.FC = () => {
           onDescriptionChange={setDescription}
           categoryLabel={loadingCategories ? 'Đang tải danh mục...' : selectedCategory?.name || 'Chọn danh mục phù hợp'}
           onPressCategory={handlePickCategory}
+          brandLabel={brand || 'Thiết lập thương hiệu (Tùy chọn)'}
+          onPressBrand={() => setShowBrandModal(true)}
         />
         <ProductPricingSection
           price={price}
           stock={stock}
           onPriceChange={(value) => setPrice(formatNumber(value))}
           onStockChange={(value) => setStock(formatNumber(value))}
-          onPressVariation={() => showComingSoon('Phân loại hàng')}
+          onPressVariation={() => setShowVariationModal(true)}
+          variantSummary={variants.length > 0 ? `${variants.length} phân loại hàng` : undefined}
         />
         <ProductShippingSection
           weight={weight}
@@ -194,6 +201,30 @@ const AddProductScreen: React.FC = () => {
         categories={categories}
         selectedCategoryId={selectedCategoryId}
         onSelect={(cat) => setSelectedCategoryId(cat.id)}
+        onAddPress={() => {
+          setShowCategoryModal(false);
+          setShowAddCategoryModal(true);
+        }}
+      />
+
+      <BrandPickerModal
+        visible={showBrandModal}
+        onClose={() => setShowBrandModal(false)}
+        selectedBrand={brand}
+        onSelect={setBrand}
+      />
+
+      <VariationEditorModal
+        visible={showVariationModal}
+        onClose={() => setShowVariationModal(false)}
+        variants={variants}
+        onSave={setVariants}
+      />
+
+      <AddCategoryModal
+        visible={showAddCategoryModal}
+        onClose={() => setShowAddCategoryModal(false)}
+        onSuccess={() => loadCategories(true)}
       />
     </SafeAreaView>
   );

@@ -18,6 +18,7 @@ interface CategoryPickerModalProps {
   categories: SellerCategory[];
   selectedCategoryId: number | null;
   onSelect: (category: SellerCategory) => void;
+  onAddPress?: () => void;
 }
 
 const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
@@ -26,6 +27,7 @@ const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
   categories,
   selectedCategoryId,
   onSelect,
+  onAddPress,
 }) => {
   return (
     <Modal
@@ -73,6 +75,13 @@ const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.addButton} activeOpacity={0.8} onPress={onAddPress}>
+              <Ionicons name="add-circle-outline" size={20} color="#fff" />
+              <Text style={styles.addButtonText}>THÊM DANH MỤC MỚI</Text>
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
       </View>
     </Modal>
@@ -135,6 +144,26 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f0f0f0',
     marginHorizontal: 20,
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
+  },
+  addButton: {
+    backgroundColor: '#3b82f6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
 

@@ -39,17 +39,27 @@ export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipping' | 
 export type OrderDTO = OrderDetail;
 
 
+export interface OrderStat {
+  status: string;
+  count: number;
+}
+
+
 // ── API calls ───────────────────────────────────────────────────────
 export async function getOrderDetail(orderId: number): Promise<OrderDetailResponse> {
-
   const res = await apiClient.get(`/api/orders/${orderId}`);
   const data = res.data?.data || res.data;
   return data as OrderDetailResponse;
 }
 
 export async function getMyOrders(): Promise<OrderDetail[]> {
-
   const res = await apiClient.get('/api/orders');
+  const data = res.data?.data || res.data;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getOrderStats(): Promise<OrderStat[]> {
+  const res = await apiClient.get('/api/orders/stats');
   const data = res.data?.data || res.data;
   return Array.isArray(data) ? data : [];
 }

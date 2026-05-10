@@ -8,6 +8,7 @@ interface ProductPricingSectionProps {
   onPriceChange: (value: string) => void;
   onStockChange: (value: string) => void;
   onPressVariation: () => void;
+  variantSummary?: string;
 }
 
 const ProductPricingSection: React.FC<ProductPricingSectionProps> = ({
@@ -16,6 +17,7 @@ const ProductPricingSection: React.FC<ProductPricingSectionProps> = ({
   onPriceChange,
   onStockChange,
   onPressVariation,
+  variantSummary,
 }) => {
   return (
     <View style={styles.section}>
@@ -54,7 +56,13 @@ const ProductPricingSection: React.FC<ProductPricingSectionProps> = ({
 
       <TouchableOpacity style={styles.variationRow} activeOpacity={0.8} onPress={onPressVariation}>
         <Ionicons name="add-circle" size={16} color="#d6336c" />
-        <Text style={styles.variationText}>PHÂN LOẠI HÀNG (MÀU SẮC, KÍCH THƯỚC...)</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.variationText}>PHÂN LOẠI HÀNG (MÀU SẮC, KÍCH THƯỚC...)</Text>
+          {variantSummary ? (
+            <Text style={styles.variantSummaryText} numberOfLines={1}>{variantSummary}</Text>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-forward" size={14} color="#adb5bd" />
       </TouchableOpacity>
     </View>
   );
@@ -116,6 +124,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#2c3e50',
+  },
+  variantSummaryText: {
+    fontSize: 11,
+    color: '#3b82f6',
+    marginTop: 2,
   },
 });
 

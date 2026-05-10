@@ -256,6 +256,13 @@ using (var scope = app.Services.CreateScope())
             WHEN duplicate_object THEN null;
         END $$;
 
+        -- Ensure 'deleted' value exists in product_status enum
+        DO $$ BEGIN
+            ALTER TYPE product_status ADD VALUE IF NOT EXISTS 'deleted';
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
         DO $$ BEGIN
             CREATE TYPE category_status AS ENUM ('active', 'inactive');
         EXCEPTION
