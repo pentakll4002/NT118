@@ -1,0 +1,14 @@
+# ── NT118 Terraform Variables ──
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git (it contains secrets)
+
+project_name     = "nt118"
+location         = "Southeast Asia"
+app_service_sku  = "B1"
+
+db_admin_user     = "nt118admin"
+db_admin_password = "CHANGE_ME_Str0ng!Pass"
+
+groq_api_key      = ""
+langchain_api_key = ""
+smtp_app_password = ""

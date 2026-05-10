@@ -7,6 +7,8 @@ Thumbs.db
 .env.*
 *.log
 
+.gemini-flow/
+
 ############################
 # Node / React Native / Expo
 ############################
@@ -73,3 +75,25 @@ docker-data/
 *.tmp
 
 .windsurf/
+
+############################
+# Terraform
+############################
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+*.tfplan
+
+############################
+# AI Vectorstore
+############################
+ai-agentic/chatbot/vectorstore/chromadb/
+ai-agentic/chatbot/vectorstore/faiss_index/
+
+############################
+# Gemini / Claude
+############################
+.gemini/
+.claude/
