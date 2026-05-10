@@ -95,18 +95,21 @@ const WishlistScreen = () => {
       </View>
 
       <FlatList
+        key={2}
         data={favorites}
+        numColumns={2}
         keyExtractor={(item) => item.favoriteId.toString()}
         renderItem={({ item }) => (
           <ProductCard
             product={transformProduct(item)}
-            isHorizontal
+            isMasonry
             isFavorited={true}
             onToggleFavorite={handleToggleFavorite}
             onPress={(p) => router.push(`/product/${p.id}` as any)}
           />
         )}
         contentContainerStyle={favorites.length === 0 ? styles.flexGrow : styles.listContent}
+        columnWrapperStyle={favorites.length > 0 ? styles.columnWrapper : undefined}
         ListEmptyComponent={renderEmptyState}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F83758']} />}
       />
@@ -142,8 +145,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 80, // Space for bottom tab
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
   },
   emptyContainer: {
     flex: 1,

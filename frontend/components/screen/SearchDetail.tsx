@@ -80,15 +80,15 @@ export default function SearchDetail({ visible, onClose }: SearchDetailProps) {
         const { aiParseSearch } = await import('../../lib/chatApi');
         const parsed = await aiParseSearch(query);
         if (parsed.extracted_query) searchParams.q = parsed.extracted_query;
-        if (parsed.color) {
-          searchParams.q = `${searchParams.q || ''} ${parsed.color}`.trim();
-        }
         if (parsed.category) {
           const { getCategories } = await import('../../lib/categoryApi');
           const cats = await getCategories();
           const matched = cats.find(c => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
           if (matched) searchParams.categoryId = matched.id;
         }
+        if (parsed.brand) searchParams.brand = parsed.brand;
+        if (parsed.min_price) searchParams.minPrice = parsed.min_price;
+        if (parsed.max_price) searchParams.maxPrice = parsed.max_price;
       }
 
       const res = await getProducts(searchParams);
