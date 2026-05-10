@@ -22,7 +22,7 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Copy data.json for address seeding (if exists)
-COPY --from=builder /src/data.json ./data.json
+COPY --from=builder /src/data.jso[n] ./
 
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://+:5058
