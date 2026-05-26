@@ -1,0 +1,133 @@
+# ============================================
+# NT118 ShopeeLite — CI/CD Pipeline
+# ============================================
+# Triggers on push to main branch
+# Builds Docker images, pushes to ACR, deploys to Azure Web Apps
+# ============================================
+
+name: Deploy NT118 to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ACR_NAME: nt118registry
+  RESOURCE_GROUP: rg-nt118
+
+jobs:
+  # ── Build and Push Docker Images ──
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            image: nt118-backend
+          - name: ai-agentic
+            context: ./ai-agentic
+            dockerfile: ./ai-agentic/Dockerfile
+            image: nt118-ai
+          - name: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+            image: nt118-frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push ${{ matrix.service.name }}
+        run: |
+          ACR_SERVER=${{ env.ACR_NAME }}.azurecr.io
+          IMAGE=$ACR_SERVER/${{ matrix.service.image }}
+
+          docker build \
+            -f ${{ matrix.service.dockerfile }} \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
+            ${{ matrix.service.context }}
+
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  # ── Deploy to Azure Web Apps ──
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Backend
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: nt118-backend
+          images: ${{ env.ACR_NAME }}.azurecr.io/nt118-backend:${{ github.sha }}
+
+      - name: Deploy AI-Agentic
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: nt118-ai
+          images: ${{ env.ACR_NAME }}.azurecr.io/nt118-ai:${{ github.sha }}
+
+      - name: Deploy Frontend
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: nt118-web
+          images: ${{ env.ACR_NAME }}.azurecr.io/nt118-frontend:${{ github.sha }}
+
+      - name: Verify deployments
+        run: |
+          echo "🚀 Deployment complete!"
+          echo "Backend:  https://nt118-backend.azurewebsites.net"
+          echo "AI:       https://nt118-ai.azurewebsites.net"
+          echo "Frontend: https://nt118-web.azurewebsites.net"
+
+  # ── Initialize Database (runs once or on schema changes) ──
+  db-init:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run database init script
+        run: |
+          az postgres flexible-server execute \
+            --name nt118-pgserver \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --admin-user ${{ secrets.DB_ADMIN_USER }} \
+            --admin-password ${{ secrets.DB_ADMIN_PASSWORD }} \
+            --database-name nt118 \
+            --file-path database/init.sql
+
+      - name: Run seed vouchers
+        run: |
+          az postgres flexible-server execute \
+            --name nt118-pgserver \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --admin-user ${{ secrets.DB_ADMIN_USER }} \
+            --admin-password ${{ secrets.DB_ADMIN_PASSWORD }} \
+            --database-name nt118 \
+            --file-path database/seed_vouchers.sql

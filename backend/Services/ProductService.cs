@@ -207,11 +207,21 @@ public class ProductService(AppDbContext db) : IProductService
 
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
-            var keyword = query.Keyword.Trim().ToLower();
-            q = q.Where(x =>
-                x.Name.ToLower().Contains(keyword)
-                || x.Slug.ToLower().Contains(keyword)
-                || (x.Description != null && x.Description.ToLower().Contains(keyword)));
+            var keywords = query.Keyword.Trim().ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var kw in keywords)
+            {
+                var keyword = kw;
+                q = q.Where(x =>
+                    x.Name.ToLower().Contains(keyword)
+                    || x.Slug.ToLower().Contains(keyword)
+                    || (x.Description != null && x.Description.ToLower().Contains(keyword)));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Brand))
+        {
+            var brand = query.Brand.Trim().ToLower();
+            q = q.Where(x => x.Brand != null && x.Brand.ToLower() == brand);
         }
 
         if (query.CategoryId.HasValue)

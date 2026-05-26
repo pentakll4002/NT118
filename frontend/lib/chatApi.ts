@@ -16,10 +16,24 @@ type ChatApiRequest = {
   signal?: AbortSignal;
 };
 
+type ChatProduct = {
+  id: number | string;
+  name: string;
+  brand?: string;
+  price: number;
+  original_price?: number;
+  sale_price?: number;
+  category?: string;
+  image?: string;
+  rating?: number;
+  deep_link: string;
+};
+
 type ChatApiResponse = {
   answer: string;
   sources?: string[];
   num_sources?: number;
+  products?: ChatProduct[];
 };
 
 const envChatbotUrl = process.env.EXPO_PUBLIC_CHATBOT_URL?.trim();
@@ -89,15 +103,17 @@ export type AIParsedSearch = {
   color: string | null;
   max_price: number | null;
   min_price: number | null;
+  brand?: string | null;
+  specs?: string[];
 };
 
 export async function aiParseSearch(query: string): Promise<AIParsedSearch> {
   try {
-    const { data } = await chatbotClient.post<AIParsedSearch>('/api/search/ai-parse', { query });
+    const { data } = await chatbotClient.post<AIParsedSearch>('/api/suggest/ai-parse', { query });
     return data;
   } catch (error) {
     console.log('aiParseSearch error:', error);
     // fallback
-    return { extracted_query: query, category: null, color: null, max_price: null, min_price: null };
+    return { extracted_query: query, category: null, color: null, max_price: null, min_price: null, brand: null, specs: [] };
   }
 }

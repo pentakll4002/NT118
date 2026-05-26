@@ -2,6 +2,7 @@ import { apiClient } from './apiClient';
 
 // Toggle to use mock data for testing
 const USE_MOCK = false;
+const MOCK_PRODUCTS: ProductDTO[] = [];
 
 export interface ViewHistoryItemDTO {
   productId: number;
@@ -60,6 +61,8 @@ export interface ProductListParams {
   shopId?: number;
   q?: string;
   brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'rating' | 'popular';
 }
 

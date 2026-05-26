@@ -19,12 +19,13 @@ public class ProductsController(IProductService products) : ControllerBase
         [FromQuery] long? shopId,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
+        [FromQuery] string? brand,
         [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = new ProductQuery(q, categoryId, shopId, minPrice, maxPrice, sort, page, pageSize);
+        var query = new ProductQuery(q, categoryId, shopId, minPrice, maxPrice, brand, sort, page, pageSize);
         return Ok(await products.GetProductsAsync(query, cancellationToken));
     }
 

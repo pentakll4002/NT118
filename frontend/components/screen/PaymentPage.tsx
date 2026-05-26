@@ -130,15 +130,15 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const totalQuantity = cartItems.reduce((sum, x) => sum + (x.quantity || 0), 0);
   const productPrice = cartItems.reduce((sum, x) => sum + (x.unitPrice || 0) * (x.quantity || 0), 0);
     
-  let currentShippingFee = shippingFee;
-  if (shippingMethod === 'tietkiem') currentShippingFee = 16000;
-  else if (shippingMethod === 'nhanh') currentShippingFee = 35700;
-  else if (shippingMethod === 'hoatoc') currentShippingFee = 50000;
-  // 'mienshi' => 0 (or use current state)
+  let activeShippingFee = shippingFee;
+  if (shippingMethod === 'tietkiem') activeShippingFee = 16000;
+  else if (shippingMethod === 'nhanh') activeShippingFee = 35700;
+  else if (shippingMethod === 'hoatoc') activeShippingFee = 50000;
+  else if (shippingMethod === 'mienshi') activeShippingFee = 0;
 
-  const shippingDiscount = currentShippingFee > 0 ? -Math.min(currentShippingFee, 19700) : 0;
+  const shippingDiscount = activeShippingFee > 0 ? -Math.min(activeShippingFee, 19700) : 0;
   const insurancePrice = 579;
-  const finalShipping = currentShippingFee + shippingDiscount; 
+  const finalShipping = activeShippingFee + shippingDiscount; 
   
   const isFreeship = (v: any) => (v.code && v.code.includes('FREESHIP')) || (v.name && v.name.toLowerCase().includes('miễn phí'));
 
@@ -184,9 +184,12 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   if (insuranceSelected) finalTotal += insurancePrice;
   finalTotal = Math.max(0, finalTotal);
 
-  if (appliedVoucher) finalTotal -= appliedVoucher.discount;
-  finalTotal = Math.max(0, finalTotal);
-  const savings = totalSaved + (appliedVoucher?.discount || 0);
+  let finalSavings = totalSaved;
+  if (appliedVoucher) {
+    finalTotal -= appliedVoucher.discount;
+    finalSavings += appliedVoucher.discount;
+  }
+  finalTotal = Math.max(0, finalTotal); // Ensure total doesn't go negative
 
   useEffect(() => {
     const estimateShippingFee = async () => {
@@ -385,7 +388,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
           <PaymentShippingSection 
             shippingMethod={shippingMethod}
             onChangeShippingMethod={setShippingMethod}
-            shippingFee={shippingFee}
+            shippingFee={activeShippingFee}
             message={message}
             onChangeMessage={setMessage}
             shopVoucher={shopVoucher}
@@ -441,7 +444,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
 
           <PaymentSummarySection 
             productPrice={productPrice}
-            shippingFee={shippingFee}
+            shippingFee={activeShippingFee}
             shippingDiscount={shippingDiscount}
             finalTotal={finalTotal}
             voucherDiscount={appliedVoucher?.discount}
@@ -452,7 +455,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
 
         <PaymentBottomBar 
           finalTotal={finalTotal}
-          savings={savings}
+          savings={finalSavings}
           onOrderPress={handleCheckout}
           loading={isProcessing || isEstimatingShipping}
         />

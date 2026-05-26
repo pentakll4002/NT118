@@ -15,12 +15,13 @@ public class SearchController(IProductService products) : ControllerBase
         [FromQuery] long? categoryId,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
+        [FromQuery] string? brand,
         [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = new ProductQuery(q, categoryId, null, minPrice, maxPrice, sort, page, pageSize);
+        var query = new ProductQuery(q, categoryId, null, minPrice, maxPrice, brand, sort, page, pageSize);
         return Ok(await products.SearchProductsAsync(query, cancellationToken));
     }
 }
