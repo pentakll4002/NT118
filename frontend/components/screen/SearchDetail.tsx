@@ -115,7 +115,13 @@ export default function SearchDetail({ visible, onClose }: SearchDetailProps) {
 
   const handleSearchSubmit = () => {
     if (searchQuery.trim().length > 0) {
-      executeSearch(searchQuery.trim());
+      const query = searchQuery.trim();
+      // Chuyển trang trước
+      router.push(`/search-results?q=${encodeURIComponent(query)}` as any);
+      // Đóng modal sau một khoảng trễ cực ngắn để đảm bảo router đã nhận lệnh
+      setTimeout(() => {
+        onClose();
+      }, 100);
     }
   };
 

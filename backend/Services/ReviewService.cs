@@ -34,8 +34,8 @@ public class ReviewService(AppDbContext db) : IReviewService
         if (order.BuyerId != userId)
             return (false, "Bạn không có quyền đánh giá đơn hàng này.");
 
-        if (order.PaymentStatus != PaymentStatus.paid)
-            return (false, "Đơn hàng chưa được thanh toán.");
+        // if (order.PaymentStatus != PaymentStatus.paid)
+        //     return (false, "Đơn hàng chưa được thanh toán.");
 
         if (order.Status != OrderStatus.delivered)
             return (false, "Đơn hàng chưa được giao. Vui lòng chờ giao hàng thành công.");
@@ -78,9 +78,9 @@ public class ReviewService(AppDbContext db) : IReviewService
         };
 
         db.Reviews.Add(review);
+        await db.SaveChangesAsync(cancellationToken);
 
         await UpdateProductRatingAsync(req.ProductId, cancellationToken);
-
         await db.SaveChangesAsync(cancellationToken);
 
         var reviewer = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -102,8 +102,9 @@ public class ReviewService(AppDbContext db) : IReviewService
         review.Comment = req.Comment;
         review.UpdatedAt = DateTime.UtcNow;
 
-        await UpdateProductRatingAsync(review.ProductId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
 
+        await UpdateProductRatingAsync(review.ProductId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         var reviewer = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -123,9 +124,9 @@ public class ReviewService(AppDbContext db) : IReviewService
 
         var productId = review.ProductId;
         db.Reviews.Remove(review);
+        await db.SaveChangesAsync(cancellationToken);
 
         await UpdateProductRatingAsync(productId, cancellationToken);
-
         await db.SaveChangesAsync(cancellationToken);
     }
 

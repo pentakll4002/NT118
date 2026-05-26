@@ -41,6 +41,22 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
         return Ok(orders);
     }
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetOrderStats(CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var stats = await db.Orders
+            .AsNoTracking()
+            .Where(x => x.BuyerId == userId)
+            .GroupBy(x => x.Status)
+            .Select(g => new { Status = g.Key.ToString().ToLower(), Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return Ok(stats);
+    }
+
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetOrderDetail(long id, CancellationToken cancellationToken)
     {

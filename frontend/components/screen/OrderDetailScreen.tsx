@@ -57,7 +57,20 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
             <View key={it.id} style={{flexDirection:'row',alignItems:'center',paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#F1F5F9'}}>
               {it.productImage ? <Image source={{uri:it.productImage}} style={{width:52,height:52,borderRadius:8,marginRight:12}}/> : <View style={{width:52,height:52,borderRadius:8,backgroundColor:'#F1F5F9',alignItems:'center',justifyContent:'center',marginRight:12}}><Feather name="image" size={20} color="#CBD5E1"/></View>}
               <View style={{flex:1}}><Text style={{fontSize:14,fontWeight:'500',color:'#1E293B'}} numberOfLines={2}>{it.productName}</Text><Text style={{fontSize:12,color:'#94A3B8'}}>SL: {it.quantity}</Text></View>
-              <Text style={{fontSize:14,fontWeight:'600',color:'#FF4747'}}>{formatPriceFull(it.totalPrice)}</Text>
+              <View style={{alignItems:'flex-end'}}>
+                <Text style={{fontSize:14,fontWeight:'600',color:'#FF4747'}}>{formatPriceFull(it.totalPrice)}</Text>
+                {order.status.toLowerCase() === 'delivered' && (
+                  <TouchableOpacity 
+                    style={s.reviewBtn}
+                    onPress={() => router.push({
+                      pathname: '/write-review',
+                      params: { productId: it.productId, orderId: order.id }
+                    })}
+                  >
+                    <Text style={s.reviewBtnText}>Đánh giá</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -88,4 +101,17 @@ const s = StyleSheet.create({
   row:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingVertical:6},
   lbl:{fontSize:14,color:'#64748B'},
   val:{fontSize:14,fontWeight:'500',color:'#1E293B'},
+  reviewBtn: {
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FF4747',
+  },
+  reviewBtnText: {
+    fontSize: 12,
+    color: '#FF4747',
+    fontWeight: '600',
+  },
 });

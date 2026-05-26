@@ -17,6 +17,9 @@ export interface Product {
   reviews: string;
   image: any;
   imageHeight?: number;
+  location?: string;
+  isMall?: boolean;
+  isFreeShip?: boolean;
 }
 
 interface ProductCardProps {
@@ -59,6 +62,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
           transition={300}
           cachePolicy="disk"
         />
+        
+        {product.isMall && (
+          <View style={[styles.badge, styles.mallBadge]}>
+            <Text style={styles.badgeText}>MALL</Text>
+          </View>
+        )}
+
+        {product.isFreeShip && (
+          <View style={[styles.badge, styles.freeShipBadge]}>
+            <Text style={styles.badgeText}>FREE SHIP+</Text>
+          </View>
+        )}
         
         {product.discount && (
           <View style={styles.discountBadge}>
@@ -105,12 +120,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </View>
 
         <View style={styles.footerRow}>
-          <View style={styles.ratingBox}>
-            <Ionicons name="star" size={10} color="#FFD700" />
-            <Text style={styles.ratingText}>{product.rating}</Text>
+          <View style={styles.footerInfo}>
+            {product.location && (
+              <Text style={styles.locationText}>{product.location}</Text>
+            )}
+            <View style={styles.rightFooter}>
+              <View style={styles.ratingBox}>
+                <Ionicons name="star" size={10} color="#FFD700" />
+                <Text style={styles.ratingText}>{product.rating}</Text>
+              </View>
+              <View style={styles.divider} />
+              <Text style={styles.soldText}>{product.reviews}</Text>
+            </View>
           </View>
-          <View style={styles.divider} />
-          <Text style={styles.soldText}>{product.reviews}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -220,28 +242,68 @@ const styles = StyleSheet.create({
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 8,
+  },
+  footerInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rightFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   ratingBox: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   ratingText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#1B1530',
-    marginLeft: 3,
+    color: '#333',
+    marginLeft: 2,
+    fontFamily: 'Montserrat_700Bold',
   },
   divider: {
-    width: 1.2,
-    height: 10,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 8,
+    width: 1,
+    height: 8,
+    backgroundColor: '#DDD',
+    marginHorizontal: 4,
+  },
+  locationText: {
+    fontSize: 10,
+    color: '#888',
+    fontFamily: 'Montserrat_400Regular',
   },
   soldText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '400',
+    fontSize: 10,
+    color: '#333',
+    fontWeight: '500',
+    fontFamily: 'Montserrat_500Medium',
+  },
+  badge: {
+    position: 'absolute',
+    left: 0,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderBottomRightRadius: 4,
+    zIndex: 3,
+  },
+  mallBadge: {
+    top: 0,
+    backgroundColor: '#D0011B',
+  },
+  freeShipBadge: {
+    bottom: 0,
+    backgroundColor: '#4392F9',
+    borderBottomRightRadius: 0,
+    borderTopRightRadius: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: 'bold',
   },
 });
 

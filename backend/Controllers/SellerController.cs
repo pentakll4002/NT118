@@ -137,7 +137,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
 
         var products = await db.Products
             .AsNoTracking()
-            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
+            .Where(x => x.Status != ProductStatus.deleted && db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new
             {
@@ -154,6 +154,20 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             .ToListAsync(cancellationToken);
 
         return Ok(products);
+    }
+
+    [HttpGet("brands")]
+    public async Task<ActionResult<IReadOnlyList<string>>> GetBrands(CancellationToken cancellationToken)
+    {
+        var brands = await db.Products
+            .AsNoTracking()
+            .Where(x => !string.IsNullOrEmpty(x.Brand))
+            .Select(x => x.Brand!)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+
+        return Ok(brands);
     }
 
     [HttpPost("products")]
@@ -186,9 +200,23 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             Rating = 0,
             TotalReviews = 0,
             Status = ProductStatus.active,
+            Brand = body.Brand,
             CreatedAt = now,
             UpdatedAt = now,
         };
+
+        if (body.Variants != null && body.Variants.Count > 0)
+        {
+            product.Variants = body.Variants.Select(v => new ProductVariant
+            {
+                Name = v.Name,
+                Value = v.Value,
+                PriceModifier = v.PriceModifier,
+                StockQuantity = v.StockQuantity,
+                Sku = v.Sku,
+                CreatedAt = now
+            }).ToList();
+        }
 
         if (body.ImageUrls != null && body.ImageUrls.Count > 0)
         {
@@ -450,7 +478,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (!isSellerOfProduct)
             return Forbid();
 
-        db.Products.Remove(product);
+        product.Status = ProductStatus.deleted;
+        product.UpdatedAt = DateTime.UtcNow;
 
         // Update shop total products
         var shop = await db.Shops.FirstOrDefaultAsync(x => x.Id == product.ShopId, cancellationToken);
@@ -460,7 +489,18 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             shop.UpdatedAt = DateTime.UtcNow;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        try 
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DeleteProductError] ID: {id}, ShopID: {product.ShopId}");
+            Console.WriteLine($"[DeleteProductError] Message: {ex.Message}");
+            if (ex.InnerException != null)
+                Console.WriteLine($"[DeleteProductError] Inner: {ex.InnerException.Message}");
+            throw;
+        }
 
         return Ok(new { message = "Xóa sản phẩm thành công." });
     }

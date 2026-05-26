@@ -258,8 +258,30 @@ public class CreateSellerProductRequest
     public int StockQuantity { get; set; }
 
     public int? WeightGrams { get; set; }
-
+    
+    [MaxLength(100)]
+    public string? Brand { get; set; }
+    
+    public List<CreateProductVariantRequest>? Variants { get; set; }
+    
     public List<string>? ImageUrls { get; set; }
+}
+
+public class CreateProductVariantRequest
+{
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, MaxLength(100)]
+    public string Value { get; set; } = string.Empty;
+
+    public decimal PriceModifier { get; set; }
+
+    [Range(0, 1000000)]
+    public int StockQuantity { get; set; }
+
+    [MaxLength(100)]
+    public string? Sku { get; set; }
 }
 
 public record ShopResponse(

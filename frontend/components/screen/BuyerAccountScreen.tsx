@@ -6,25 +6,31 @@ import { useRouter } from 'expo-router';
 import { clearAuthToken } from '../../lib/authToken';
 
 import { userApi, UserProfileDTO } from '../../lib/userApi';
+import { getOrderStats, OrderStat } from '../../lib/orderApi';
 
 import { useFocusEffect } from '@react-navigation/native';
 
 const BuyerAccountScreen: React.FC = () => {
   const router = useRouter();
   const [profile, setProfile] = React.useState<UserProfileDTO | null>(null);
+  const [orderStats, setOrderStats] = React.useState<OrderStat[]>([]);
 
-  const fetchProfile = async () => {
+  const fetchData = async () => {
     try {
-      const data = await userApi.getProfile();
-      setProfile(data);
+      const [profileData, statsData] = await Promise.all([
+        userApi.getProfile(),
+        getOrderStats()
+      ]);
+      setProfile(profileData);
+      setOrderStats(statsData);
     } catch (error) {
-      console.error('Failed to fetch profile in account screen:', error);
+      console.error('Failed to fetch account data:', error);
     }
   };
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchProfile();
+      fetchData();
     }, [])
   );
 
@@ -91,18 +97,28 @@ const BuyerAccountScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.gridRow}>
-            {orderActions.map((item) => (
-              <TouchableOpacity 
-                key={item.key} 
-                style={styles.gridItem}
-                onPress={() => router.push({ pathname: '/orders' as any, params: { status: item.status } })}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: item.bg }]}>
-                  <Ionicons name={item.icon as any} size={20} color={item.color} />
-                </View>
-                <Text style={styles.gridText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
+            {orderActions.map((item) => {
+              const stat = orderStats.find(s => s.status === item.status);
+              const count = stat ? stat.count : 0;
+              
+              return (
+                <TouchableOpacity 
+                  key={item.key} 
+                  style={styles.gridItem}
+                  onPress={() => router.push({ pathname: '/orders' as any, params: { status: item.status } })}
+                >
+                  <View style={[styles.iconWrap, { backgroundColor: item.bg }]}>
+                    <Ionicons name={item.icon as any} size={20} color={item.color} />
+                    {count > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.gridText}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -349,6 +365,24 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#e11d48',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF4747',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 });
 

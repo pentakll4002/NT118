@@ -102,7 +102,17 @@ export interface CreateSellerProductPayload {
   originalPrice?: number;
   stockQuantity: number;
   weightGrams?: number;
+  brand?: string;
+  variants?: CreateProductVariantPayload[];
   imageUrls?: string[];
+}
+
+export interface CreateProductVariantPayload {
+  name: string;
+  value: string;
+  priceModifier: number;
+  stockQuantity: number;
+  sku?: string;
 }
 
 export interface CreateSellerProductResponse {
@@ -188,6 +198,16 @@ export const sellerApi = {
 
   getCategories: async (): Promise<SellerCategory[]> => {
     const response = await apiClient.get<SellerCategory[]>('/api/categories');
+    return response.data;
+  },
+
+  createCategory: async (data: { name: string; slug: string; description?: string }): Promise<{ id: number; message: string }> => {
+    const response = await apiClient.post<{ id: number; message: string }>('/api/categories', data);
+    return response.data;
+  },
+
+  getBrands: async (): Promise<string[]> => {
+    const response = await apiClient.get<string[]>('/api/seller/brands');
     return response.data;
   },
 

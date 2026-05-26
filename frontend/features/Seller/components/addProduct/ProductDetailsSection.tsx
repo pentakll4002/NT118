@@ -9,6 +9,8 @@ interface ProductDetailsSectionProps {
   onDescriptionChange: (value: string) => void;
   categoryLabel?: string;
   onPressCategory?: () => void;
+  brandLabel?: string;
+  onPressBrand?: () => void;
 }
 
 const ProductDetailsSection: React.FC<ProductDetailsSectionProps> = ({
@@ -18,6 +20,8 @@ const ProductDetailsSection: React.FC<ProductDetailsSectionProps> = ({
   onDescriptionChange,
   categoryLabel = 'Chọn danh mục phù hợp',
   onPressCategory,
+  brandLabel = 'Thiết lập thương hiệu (Tùy chọn)',
+  onPressBrand,
 }) => {
   return (
     <View style={styles.section}>
@@ -55,10 +59,10 @@ const ProductDetailsSection: React.FC<ProductDetailsSectionProps> = ({
         <Ionicons name="chevron-forward" size={18} color="#9aa0a6" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.selectorRow} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.selectorRow} activeOpacity={0.8} onPress={onPressBrand}>
         <View>
           <Text style={styles.inputLabel}>THƯƠNG HIỆU</Text>
-          <Text style={styles.selectorText}>Thiết lập thương hiệu (Tùy chọn)</Text>
+          <Text style={styles.selectorText}>{brandLabel}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color="#9aa0a6" />
       </TouchableOpacity>

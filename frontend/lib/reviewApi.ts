@@ -46,8 +46,8 @@ export async function createReview(payload: CreateReviewPayload): Promise<Review
     const res = await apiClient.post('/api/reviews', payload);
     return res.data?.data || res.data;
   } catch (err: any) {
-    const msg = err?.response?.data?.message || 'Không thể gửi đánh giá. Vui lòng thử lại.';
-    console.error('Failed to create review:', msg);
+    const msg = err?.response?.data?.message || err?.message || 'Không thể gửi đánh giá. Vui lòng thử lại.';
+    console.error('Failed to create review:', err?.response?.data || err?.message);
     throw new Error(msg);
   }
 }

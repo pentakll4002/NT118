@@ -127,8 +127,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.ParentId).HasColumnName("parent_id");
             e.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(500);
             e.Property(x => x.SortOrder).HasColumnName("sort_order");
-            e.Property(x => x.Status).HasColumnName("status")
-                .HasConversion(v => v.ToString(), v => Enum.Parse<CategoryStatus>(v));
+            e.Property(x => x.Status).HasColumnName("status");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
             e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
             e.HasIndex(x => x.Slug).IsUnique();

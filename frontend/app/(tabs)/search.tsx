@@ -1,5 +1,4 @@
-import HomePage from '@/components/screen/HomePage';
-
-export default function SearchTabScreen() {
-  return <HomePage />;
+// File này đã được vô hiệu hóa để tránh vòng lặp điều hướng
+export default function InactiveSearch() {
+  return null;
 }

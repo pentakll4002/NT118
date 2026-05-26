@@ -17,30 +17,46 @@ public class CategoriesController(IProductService products, AppDbContext db) : C
     public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> GetAll(CancellationToken cancellationToken) =>
         Ok(await products.GetCategoriesAsync(cancellationToken));
 
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,seller")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCategoryRequest body, CancellationToken cancellationToken)
     {
-        var exists = await db.Categories.AnyAsync(x => x.Slug == body.Slug, cancellationToken);
-        if (exists)
-            return Conflict(new { message = "Slug đã tồn tại." });
-
-        var category = new Category
+        try
         {
-            Name = body.Name,
-            Slug = body.Slug,
-            Description = body.Description,
-            ParentId = body.ParentId,
-            ImageUrl = body.ImageUrl,
-            SortOrder = body.SortOrder,
-            Status = body.Status,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+            var slugExists = await db.Categories.AnyAsync(x => x.Slug == body.Slug, cancellationToken);
+            if (slugExists)
+                return Conflict(new { message = "Slug hoặc tên danh mục này đã tồn tại." });
 
-        db.Categories.Add(category);
-        await db.SaveChangesAsync(cancellationToken);
-        return Ok(new { category.Id, message = "Tạo danh mục thành công." });
+            var nameExists = await db.Categories.AnyAsync(x => x.Name.ToLower() == body.Name.ToLower(), cancellationToken);
+            if (nameExists)
+                return Conflict(new { message = "Tên danh mục này đã tồn tại." });
+
+            var category = new Category
+            {
+                Name = body.Name,
+                Slug = body.Slug,
+                Description = body.Description,
+                ParentId = body.ParentId,
+                ImageUrl = body.ImageUrl,
+                SortOrder = body.SortOrder,
+                Status = body.Status,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            db.Categories.Add(category);
+            await db.SaveChangesAsync(cancellationToken);
+            return Ok(new { category.Id, message = "Tạo danh mục thành công." });
+        }
+        catch (DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { message = $"Lỗi Database: {innerMessage}" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"Lỗi hệ thống: {ex.Message}" });
+        }
     }
 
     [Authorize(Roles = "admin")]

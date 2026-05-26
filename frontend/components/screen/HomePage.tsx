@@ -30,38 +30,7 @@ import { getProducts, getFeaturedProducts, ProductDTO, formatPrice, formatSold }
 import { getCategories, CategoryDTO } from '../../lib/categoryApi';
 import { userApi, UserProfileDTO } from '../../lib/userApi';
 
-const categories: Category[] = [
-  {
-    id: 1,
-    name: 'Thân Thiết',
-    icon: { library: 'MaterialCommunityIcons', name: 'medal-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 2,
-    name: 'Mã Giảm Giá',
-    icon: { library: 'MaterialCommunityIcons', name: 'ticket-percent-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 3,
-    name: 'Đồ Trẻ Em',
-    icon: { library: 'MaterialIcons', name: 'child-care', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-  {
-    id: 4,
-    name: 'Thời Trang',
-    icon: { library: 'Ionicons', name: 'shirt-outline', color: '#F73658', size: 26 },
-    bgColor: '#fff',
-  },
-  {
-    id: 5,
-    name: 'Quà Tặng',
-    icon: { library: 'MaterialCommunityIcons', name: 'gift-outline', color: '#F73658', size: 28 },
-    bgColor: '#fff',
-  },
-];
+
 
 function toCardProduct(dto: ProductDTO): Product {
   return {
@@ -107,8 +76,26 @@ const HomePage = () => {
     const h = Math.floor(s / 3600).toString().padStart(2, '0');
     const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
     const sec = (s % 60).toString().padStart(2, '0');
-    return `Kết thúc sau ${h}:${m}:${sec}`;
+    return `Kết thúc sau ${h}:${m}:${sec}`;
   };
+
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const banners = [
+    {
+      title: "Ưu Đãi Đặc Biệt",
+      subtitle: "Giá tốt nhất thị trường",
+      detail: "Cam kết hoàn tiền nếu tìm thấy nơi rẻ hơn",
+      image: require('../../assets/images/banner/banner-1.png'),
+      onPress: () => router.push('/search-results?sort=popular' as any),
+    },
+    {
+      title: "Siêu Sale Mùa Hè",
+      subtitle: "Giảm giá lên đến 50%",
+      detail: "Áp dụng cho toàn bộ ngành hàng điện tử & thời trang",
+      image: require('../../assets/images/banner/banner-2.png'),
+      onPress: () => router.push('/search-results?sort=newest' as any),
+    }
+  ];
 
   const loadData = useCallback(async () => {
     try {
@@ -164,11 +151,22 @@ const HomePage = () => {
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    
+    // Check for pagination in horizontal banner scroll
+    // This is handled via onMomentumScrollEnd for the banner ScrollView
+    
+    // Check for load more in vertical scroll
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
     
     if (isCloseToBottom) {
       loadMoreSuggested();
     }
+  };
+
+  const handleBannerScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    setActiveBannerIndex(index);
   };
 
   useEffect(() => {
@@ -197,7 +195,7 @@ const HomePage = () => {
         style: opt.style,
         onPress: () => {
           if (opt.value !== 'cancel') {
-            router.push(`/search?sort=${opt.value}` as any);
+            router.push(`/search-results?sort=${opt.value}` as any);
           }
         }
       }))
@@ -224,7 +222,7 @@ const HomePage = () => {
         style: (opt as any).style,
         onPress: () => {
           if (opt.id !== 'cancel') {
-            const url = opt.id ? `/search?categoryId=${opt.id}` : '/search';
+            const url = opt.id ? `/search-results?categoryId=${opt.id}` : '/search-results';
             router.push(url as any);
           }
         }
@@ -269,37 +267,42 @@ const HomePage = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        <TouchableOpacity 
-          onPress={() => setIsSearchVisible(true)} 
-          activeOpacity={0.9}
-          style={styles.searchWrapper}
+        <View style={{ zIndex: 999, elevation: 10 }}>
+          <SearchBar
+            placeholder="Tìm kiếm sản phẩm, thương hiệu..."
+            onPress={() => setIsSearchVisible(true)}
+          />
+        </View>
+
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleBannerScroll}
+          style={styles.bannerCarousel}
         >
-          <View pointerEvents="none">
-            <SearchBar
-              placeholder="Tìm kiếm sản phẩm, thương hiệu..."
-              editable={false}
-            />
-          </View>
-        </TouchableOpacity>
+          {banners.map((b, i) => (
+            <View key={i} style={{ width: width }}>
+              <Banner
+                title={b.title}
+                subtitle={b.subtitle}
+                detail={b.detail}
+                image={b.image}
+                activeDotIndex={activeBannerIndex}
+                totalDots={banners.length}
+                onPress={b.onPress}
+              />
+            </View>
+          ))}
+        </ScrollView>
 
-        <Categories 
-          categories={categories} 
-          onSortPress={handleSort}
-          onFilterPress={handleFilter}
-        />
-
-        <Banner
-          title="Siêu Sale Mùa Hè"
-          subtitle="Giảm giá lên đến 50%"
-          detail="Áp dụng cho toàn bộ ngành hàng thời trang"
-          image={require('../../assets/images/slash/sales.png')}
-        />
+        {/* Categories section removed as requested */}
 
         <SectionHeader
           title="Deal Chớp Nhoáng"
           timerText={formatCountdown(countdown)}
           isBlueVariant={false}
-          onViewAllPress={() => router.push('/search?sort=popular' as any)}
+          onViewAllPress={() => router.push('/search-results?sort=popular' as any)}
         />
 
         {loading && !refreshing ? (
@@ -329,24 +332,11 @@ const HomePage = () => {
           </ScrollView>
         )}
 
-        <SpecialOffer
-          title="Ưu Đãi Đặc Biệt"
-          description="Chúng tôi đảm bảo bạn sẽ nhận được mức giá tốt nhất thị trường"
-          emoji="😱"
-        />
-
-        <PromotionBanner
-          title="Tai nghe Sony XM5"
-          subtitle="Chống ồn đỉnh cao"
-          buttonText="Mua Ngay"
-          image={require('../../assets/images/slash/shopping.png')}
-        />
-
-        <WishlistBanner onPress={() => router.push('/(tabs)/wishlist')} />
+        <View style={styles.sectionDivider} />
 
         <SectionHeader
           title="Sản phẩm mới nhất"
-          onViewAllPress={() => router.push('/search?sort=newest' as any)}
+          onViewAllPress={() => router.push('/search-results?sort=newest' as any)}
         />
 
         {loading && !refreshing ? (
@@ -376,16 +366,12 @@ const HomePage = () => {
           </ScrollView>
         )}
 
-        <NewArrivalsCard
-          title="Hàng Mới Về"
-          subtitle="Bộ sưu tập Hè 2026"
-          onViewAll={() => router.push('/search?sort=newest' as any)}
-          image={require('../../assets/images/slash/shop.png')}
-        />
+        <View style={styles.sectionDivider} />
+
+        <WishlistBanner onPress={() => router.push('/(tabs)/wishlist')} />
 
         <SectionHeader
           title="Gợi ý dành cho bạn"
-          onViewAllPress={() => router.push('/search')}
         />
 
         {loading && !refreshing ? (
@@ -437,18 +423,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  searchWrapper: {
+  bannerCarousel: {
     marginTop: 8,
+  },
+  sectionDivider: {
+    height: 8,
+    backgroundColor: '#F8F9FA',
+    marginVertical: 16,
   },
   horizontalList: {
     paddingHorizontal: 16,
-    marginTop: 8,
+    marginTop: 4,
     paddingBottom: 8,
   },
   masonryContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginTop: 12,
+    marginTop: 8,
     justifyContent: 'space-between',
   },
   column: {
