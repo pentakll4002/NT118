@@ -42,3 +42,19 @@ API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8000"))
 
 STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", "8501"))
+
+# Inter-service URLs — injected via K8s ConfigMap in production
+CORE_SERVICE_URL = os.getenv("CORE_SERVICE_URL", "http://localhost:3003")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:3001")
+BACKEND_URL = os.getenv("BACKEND_URL", CORE_SERVICE_URL)
+
+# CORS allowed origins — comma-separated list from env
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
+
+# ── PostgreSQL (direct DB access) ──
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/nt118")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("DB_NAME", "nt118")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "123456")

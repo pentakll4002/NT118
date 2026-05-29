@@ -8,6 +8,7 @@ public record ProductQuery(
     long? ShopId,
     decimal? MinPrice,
     decimal? MaxPrice,
+    string? Brand,
     [property: RegularExpression("^(price_asc|price_desc|rating|sold)?$")] string? Sort,
     [property: Range(1, 100000)] int Page = 1,
     [property: Range(1, 100)] int PageSize = 20);

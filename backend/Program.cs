@@ -517,6 +517,31 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
+// ── Health check endpoint (used by Docker HEALTHCHECK & Azure probes) ──
+app.MapGet("/health", async (AppDbContext db) =>
+{
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync();
+        return Results.Ok(new
+        {
+            status = canConnect ? "healthy" : "degraded",
+            database = canConnect ? "connected" : "disconnected",
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new
+        {
+            status = "degraded",
+            database = "error",
+            error = ex.Message,
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
+
 app.Run("http://0.0.0.0:5058");
 
 static string Slugify(string input)

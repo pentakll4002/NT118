@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, TextInput, TouchableOpacity, StyleSheet, Text, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SearchBarProps {
@@ -12,6 +12,7 @@ interface SearchBarProps {
   editable?: boolean;
   autoFocus?: boolean;
   onAIPress?: () => void;
+  onAISearchResult?: (result: any) => void;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
@@ -23,8 +24,59 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onPress,
   editable = true,
   autoFocus = false,
-  onAIPress
+  onAIPress,
+  onAISearchResult,
 }) => {
+  const [isAILoading, setIsAILoading] = useState(false);
+  const aiPulse = useRef(new Animated.Value(1)).current;
+
+  // Pulsing animation when AI is processing
+  useEffect(() => {
+    if (isAILoading) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(aiPulse, { toValue: 0.5, duration: 600, useNativeDriver: true }),
+          Animated.timing(aiPulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ]),
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      aiPulse.setValue(1);
+    }
+  }, [isAILoading]);
+
+  const handleAIPress = useCallback(async () => {
+    if (onAIPress) {
+      onAIPress();
+      return;
+    }
+
+    // If no external handler, do inline AI parse
+    if (!value?.trim() || isAILoading) return;
+
+    setIsAILoading(true);
+    try {
+      const { aiParseSearch } = await import('../../lib/chatApi');
+      const result = await aiParseSearch(value.trim());
+      if (onAISearchResult) {
+        onAISearchResult(result);
+      }
+      // Update the search text with the extracted query
+      if (result.extracted_query && onChangeText) {
+        onChangeText(result.extracted_query);
+      }
+      // Auto-submit after AI parse
+      if (onSubmitEditing) {
+        setTimeout(() => onSubmitEditing(), 100);
+      }
+    } catch (error) {
+      console.log('AI search parse error:', error);
+    } finally {
+      setIsAILoading(false);
+    }
+  }, [value, isAILoading, onAIPress, onAISearchResult, onChangeText, onSubmitEditing]);
+
   const content = (
     <View style={styles.searchBar}>
         <Ionicons name="search" size={20} color="#BBBBBB" />
@@ -43,9 +95,20 @@ const SearchBar: React.FC<SearchBarProps> = ({
             autoFocus={autoFocus}
           />
         )}
-        {onAIPress && (
-          <TouchableOpacity onPress={onAIPress} style={{ marginRight: 8 }}>
-            <Ionicons name="sparkles" size={20} color="#F73658" />
+        {(onAIPress || onAISearchResult) && (
+          <TouchableOpacity
+            onPress={handleAIPress}
+            style={styles.aiButton}
+            disabled={isAILoading}
+            activeOpacity={0.7}
+          >
+            {isAILoading ? (
+              <ActivityIndicator size={16} color="#F73658" />
+            ) : (
+              <Animated.View style={{ opacity: aiPulse }}>
+                <Ionicons name="sparkles" size={20} color="#F73658" />
+              </Animated.View>
+            )}
           </TouchableOpacity>
         )}
         <TouchableOpacity onPress={onVoicePress}>
@@ -91,6 +154,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Montserrat_400Regular',
     color: '#BBBBBB',
+  },
+  aiButton: {
+    marginRight: 8,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

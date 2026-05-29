@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -14,7 +15,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { sendChatMessage } from '@/lib/chatApi';
+import { formatPrice } from '@/lib/productApi';
+
+/* ── Types ── */
+export type ChatProduct = {
+  id: number | string;
+  name: string;
+  brand?: string;
+  price: number;
+  original_price?: number;
+  sale_price?: number;
+  category?: string;
+  image?: string;
+  rating?: number;
+  deep_link: string;
+};
 
 export type ChatMessage = {
   id: string;
@@ -22,6 +39,7 @@ export type ChatMessage = {
   sender: 'me' | 'other';
   time: string;
   sources?: string[];
+  products?: ChatProduct[];
 };
 
 type ChatUIProps = {
@@ -100,8 +118,47 @@ const BotAvatar: React.FC<{ size?: number }> = ({ size = 30 }) => (
   </LinearGradient>
 );
 
+/* ---------- Product card inside chat ---------- */
+const ChatProductCard: React.FC<{ product: ChatProduct; onPress: (p: ChatProduct) => void }> = ({ product, onPress }) => {
+  const displayPrice = product.sale_price || product.price;
+  const hasDiscount = product.original_price && product.original_price > displayPrice;
+
+  return (
+    <TouchableOpacity
+      style={styles.productCard}
+      activeOpacity={0.85}
+      onPress={() => onPress(product)}
+    >
+      {product.image ? (
+        <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
+      ) : (
+        <View style={[styles.productImage, styles.productImagePlaceholder]}>
+          <Feather name="package" size={24} color={C.textDim} />
+        </View>
+      )}
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+        {product.brand ? <Text style={styles.productBrand}>{product.brand}</Text> : null}
+        <View style={styles.productPriceRow}>
+          <Text style={styles.productPrice}>{formatPrice(displayPrice)}</Text>
+          {hasDiscount ? (
+            <Text style={styles.productOriginalPrice}>{formatPrice(product.original_price!)}</Text>
+          ) : null}
+        </View>
+        {product.rating ? (
+          <View style={styles.productRatingRow}>
+            <Feather name="star" size={11} color="#FBBF24" />
+            <Text style={styles.productRating}>{product.rating.toFixed(1)}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Feather name="chevron-right" size={16} color={C.textDim} />
+    </TouchableOpacity>
+  );
+};
+
 /* ---------- Message bubble ---------- */
-const MessageBubble: React.FC<{ item: ChatMessage }> = ({ item }) => {
+const MessageBubble: React.FC<{ item: ChatMessage; onProductPress: (p: ChatProduct) => void }> = ({ item, onProductPress }) => {
   const isMe = item.sender === 'me';
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(10)).current;
@@ -137,6 +194,20 @@ const MessageBubble: React.FC<{ item: ChatMessage }> = ({ item }) => {
         ) : (
           <View style={[styles.bubble, styles.otherBubble]}>
             <Text style={[styles.messageText, styles.otherText]}>{item.text}</Text>
+
+            {/* ── Product cards ── */}
+            {item.products && item.products.length > 0 ? (
+              <View style={styles.productsWrap}>
+                <View style={styles.productsHeader}>
+                  <Feather name="shopping-bag" size={12} color={C.primary} />
+                  <Text style={styles.productsTitle}>Sản phẩm gợi ý</Text>
+                </View>
+                {item.products.map((p) => (
+                  <ChatProductCard key={String(p.id)} product={p} onPress={onProductPress} />
+                ))}
+              </View>
+            ) : null}
+
             {item.sources && item.sources.length > 0 ? (
               <View style={styles.sourcesWrap}>
                 <View style={styles.sourcesHeader}>
@@ -165,6 +236,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
   initialMessages = defaultMessages,
   onBackPress,
 }) => {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -177,6 +249,11 @@ const ChatUI: React.FC<ChatUIProps> = ({
     const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(t);
   }, [messages, isSending]);
+
+  const handleProductPress = (product: ChatProduct) => {
+    const id = typeof product.id === 'string' ? product.id : product.id;
+    router.push(`/product/${id}` as any);
+  };
 
   const handleSend = async () => {
     const content = draft.trim();
@@ -217,6 +294,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
           sender: 'other',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           sources: response.sources,
+          products: response.products,
         },
       ]);
     } catch (error) {
@@ -277,7 +355,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
             data={sortedMessages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messageList}
-            renderItem={({ item }) => <MessageBubble item={item} />}
+            renderItem={({ item }) => <MessageBubble item={item} onProductPress={handleProductPress} />}
             showsVerticalScrollIndicator={false}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           />
@@ -433,6 +511,84 @@ const styles = StyleSheet.create({
   typingBubble: { paddingVertical: 14, paddingHorizontal: 16 },
   dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.primary },
+
+  // ── Product cards inside chat bubble ──
+  productsWrap: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  productsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  productsTitle: {
+    fontSize: 11,
+    color: C.primary,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFE',
+    borderRadius: 12,
+    padding: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.08)',
+  },
+  productImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#F3F0FF',
+  },
+  productImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  productName: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: C.text,
+    lineHeight: 17,
+  },
+  productBrand: {
+    fontSize: 10.5,
+    color: C.textMuted,
+    marginTop: 1,
+  },
+  productPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3,
+  },
+  productPrice: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.primary,
+  },
+  productOriginalPrice: {
+    fontSize: 10.5,
+    color: C.textDim,
+    textDecorationLine: 'line-through',
+  },
+  productRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  productRating: {
+    fontSize: 10.5,
+    color: '#92400E',
+    fontWeight: '600',
+  },
 
   // sources
   sourcesWrap: {

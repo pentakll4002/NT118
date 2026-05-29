@@ -46,6 +46,26 @@ public class PaymentsController(AppDbContext db, IConfiguration configuration, I
     [HttpPost("apply-voucher")]
     public async Task<IActionResult> ApplyVoucher([FromBody] ApplyVoucherRequest body, CancellationToken cancellationToken)
     {
+        // --- MOCK VOUCHERS FOR TESTING ---
+        var code = body.Code?.ToUpper()?.Trim();
+        if (code == "WELCOME" || code == "WELCOME30K")
+        {
+            var is30k = code == "WELCOME30K";
+            var discountMock = is30k ? 30000m : (body.OrderAmount * 0.1m); // 30k or 10%
+            if (is30k && body.OrderAmount < 150000m)
+                return BadRequest(new { message = "Đơn hàng tối thiểu 150.000đ để áp dụng voucher này." });
+                
+            discountMock = Math.Min(discountMock, body.OrderAmount);
+            return Ok(new
+            {
+                Id = 9999, // Fake ID
+                Code = code,
+                Discount = discountMock,
+                FinalAmount = body.OrderAmount - discountMock,
+            });
+        }
+        // ---------------------------------
+
         var now = DateTime.UtcNow;
         var voucher = await db.Vouchers.FirstOrDefaultAsync(
             x => x.Code == body.Code && x.IsActive && x.StartDate <= now && x.EndDate >= now,

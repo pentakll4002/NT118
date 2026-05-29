@@ -14,16 +14,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../database/seed_vouchers.sql:/docker-entrypoint-initdb.d/02-seed-vouchers.sql
+      - ../database/validation_triggers.sql:/docker-entrypoint-initdb.d/03-triggers.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - nt118-network
 
   backend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.backend
+      context: ../backend
+      dockerfile: Dockerfile
     container_name: nt118-backend
     restart: unless-stopped
     ports:
@@ -36,25 +40,66 @@ services:
       - SMTP_FROM_EMAIL=hiroplayga@gmail.com
       - SMTP_FROM_NAME=NT118 App
       - SMTP_APP_PASSWORD=hemd yilb eyid qscu
+      - ASPNETCORE_ENVIRONMENT=Production
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - backend_uploads:/app/wwwroot/uploads
+    networks:
+      - nt118-network
 
-  # ai:
-  #   build:
-  #     context: ..
-  #     dockerfile: docker/Dockerfile.ai
-  #   container_name: nt118-ai
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8000:8000"
-  #   environment:
-  #     - MODEL_TYPE=groq
-  #     - GROQ_API_KEY=your_key_here
-  #   depends_on:
-  #     - backend
+  ai-agentic:
+    build:
+      context: ../ai-agentic
+      dockerfile: Dockerfile
+    container_name: nt118-ai-agentic
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DATABASE_URL=postgresql://postgres:postgres@nt118-postgres:5432/nt118
+      - BACKEND_URL=http://nt118-backend:5058
+      - CORE_SERVICE_URL=http://nt118-backend:5058
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - MODEL_TYPE=${MODEL_TYPE:-groq}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+      - GROQ_TIMEOUT=120
+      - LANGCHAIN_TRACING_V2=true
+      - LANGCHAIN_PROJECT=nt118-chatbot
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - nt118-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        EXPO_PUBLIC_API_URL: http://localhost:5058
+        EXPO_PUBLIC_CHATBOT_URL: http://localhost:8000
+    container_name: nt118-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - ai-agentic
+    networks:
+      - nt118-network
+
+networks:
+  nt118-network:
+    driver: bridge
+
+
 
   db-seed:
     build:
