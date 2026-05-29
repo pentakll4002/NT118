@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProductDTO, formatPriceFull } from '../../lib/productApi';
+import { ProductDTO, formatPriceFull, ProductVariantDTO } from '../../lib/productApi';
 
 interface ProductSelectionModalProps {
   visible: boolean;
@@ -9,51 +9,110 @@ interface ProductSelectionModalProps {
   product: ProductDTO;
   selectedQuantity: number;
   setSelectedQuantity: (qty: number) => void;
+  selectedVariantId?: number;
+  onSelectVariant: (variantId: number | undefined) => void;
   mode: 'cart' | 'buy';
   onConfirm: () => void;
   loading: boolean;
 }
 
 const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
-  visible, onClose, product, selectedQuantity, setSelectedQuantity, mode, onConfirm, loading
+  visible,
+  onClose,
+  product,
+  selectedQuantity,
+  setSelectedQuantity,
+  selectedVariantId,
+  onSelectVariant,
+  mode,
+  onConfirm,
+  loading,
 }) => {
+  const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId);
+  const currentPrice = product.price + (selectedVariant?.priceModifier || 0);
+  const currentStock = selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity;
+
+  // Group variants by name
+  const groupedVariants = React.useMemo(() => {
+    const groups: Record<string, { label: string; items: ProductVariantDTO[] }> = {};
+    product.variants?.forEach((v) => {
+      const key = v.name.trim().toLowerCase().normalize('NFC');
+      let group = groups[key];
+      if (!group) {
+        group = { label: v.name.trim(), items: [] };
+        groups[key] = group;
+      }
+      group.items.push(v);
+    });
+    return groups;
+  }, [product.variants]);
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay} 
-        activeOpacity={1} 
-        onPress={onClose}
-      >
-        <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-          <TouchableOpacity 
-            style={styles.closeModalBtnTop} 
-            onPress={onClose}
-          >
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+          <TouchableOpacity style={styles.closeModalBtnTop} onPress={onClose}>
             <Ionicons name="close" size={24} color="#333" />
           </TouchableOpacity>
-          
+
           <View style={styles.modalHeader}>
-            <Image 
-              source={product.image ? { uri: product.image } : require('../../assets/images/Group 34010.png')} 
-              style={styles.modalProductImage} 
+            <Image
+              source={
+                product.image
+                  ? { uri: product.image }
+                  : product.thumbnails && product.thumbnails.length > 0
+                  ? { uri: product.thumbnails[0] }
+                  : require('../../assets/images/product/product-1.png')
+              }
+              style={styles.modalProductImage}
             />
             <View style={styles.modalHeaderInfo}>
-              <Text style={styles.modalPrice}>{formatPriceFull(product.price)}</Text>
-              <Text style={styles.modalStock}>Kho: {product.stockQuantity}</Text>
+              <Text style={styles.modalPrice}>{formatPriceFull(currentPrice)}</Text>
+              <Text style={styles.modalStock}>Kho: {currentStock}</Text>
+              {selectedVariant && (
+                <Text style={styles.selectedVariantText}>
+                  Đã chọn: {selectedVariant.name} {selectedVariant.value}
+                </Text>
+              )}
             </View>
           </View>
 
           <ScrollView style={styles.selectionScroll}>
+            {Object.entries(groupedVariants).map(([key, group]) => (
+              <View key={key} style={styles.variantGroup}>
+                <Text style={styles.variantLabel}>{group.label}</Text>
+                <View style={styles.variantOptions}>
+                  {group.items?.map((v) => (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={[
+                        styles.variantOption,
+                        selectedVariantId === v.id && styles.variantOptionSelected,
+                        v.stockQuantity === 0 && styles.variantOptionDisabled,
+                      ]}
+                      onPress={() => onSelectVariant(selectedVariantId === v.id ? undefined : v.id)}
+                      disabled={v.stockQuantity === 0}
+                    >
+                      <Text
+                        style={[
+                          styles.variantOptionText,
+                          selectedVariantId === v.id && styles.variantOptionTextSelected,
+                          v.stockQuantity === 0 && styles.variantOptionTextDisabled,
+                        ]}
+                      >
+                        {v.value}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+
             <View style={styles.quantitySection}>
               <Text style={styles.variantLabel}>Số lượng</Text>
               <View style={styles.quantityControls}>
-                <TouchableOpacity 
-                  style={styles.qtyBtn} 
+                <TouchableOpacity
+                  style={styles.qtyBtn}
                   onPress={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
                 >
                   <Ionicons name="remove" size={20} color="#333" />
@@ -61,9 +120,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                 <View style={styles.qtyInput}>
                   <Text style={styles.qtyText}>{selectedQuantity}</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.qtyBtn} 
-                  onPress={() => setSelectedQuantity(Math.min(product.stockQuantity, selectedQuantity + 1))}
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => setSelectedQuantity(Math.min(currentStock, selectedQuantity + 1))}
                 >
                   <Ionicons name="add" size={20} color="#333" />
                 </TouchableOpacity>
@@ -71,14 +130,16 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
             </View>
           </ScrollView>
 
-          <TouchableOpacity 
-            style={styles.confirmBtn}
+          <TouchableOpacity
+            style={[styles.confirmBtn, currentStock === 0 && styles.confirmBtnDisabled]}
             onPress={onConfirm}
-            disabled={loading}
+            disabled={loading || currentStock === 0}
           >
-            {loading ? <ActivityIndicator color="#FFF" /> : (
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
               <Text style={styles.confirmBtnText}>
-                {mode === 'cart' ? 'THÊM VÀO GIỎ HÀNG' : 'MUA NGAY'}
+                {currentStock === 0 ? 'HẾT HÀNG' : mode === 'cart' ? 'THÊM VÀO GIỎ HÀNG' : 'MUA NGAY'}
               </Text>
             )}
           </TouchableOpacity>
@@ -127,6 +188,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  selectedVariantText: {
+    fontSize: 13,
+    color: '#F83758',
+    fontWeight: '600',
+    marginTop: 2,
+  },
   closeModalBtnTop: {
     position: 'absolute',
     top: 16,
@@ -134,8 +201,46 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   selectionScroll: {
-    maxHeight: 300,
+    maxHeight: 400,
     paddingHorizontal: 20,
+  },
+  variantGroup: {
+    marginBottom: 20,
+  },
+  variantOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+    gap: 10,
+  },
+  variantOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  variantOptionSelected: {
+    backgroundColor: '#FFF0F3',
+    borderColor: '#F83758',
+  },
+  variantOptionDisabled: {
+    backgroundColor: '#F1F3F5',
+    borderColor: '#E9ECEF',
+    opacity: 0.5,
+  },
+  variantOptionText: {
+    fontSize: 14,
+    color: '#495057',
+    fontWeight: '500',
+  },
+  variantOptionTextSelected: {
+    color: '#F83758',
+    fontWeight: '700',
+  },
+  variantOptionTextDisabled: {
+    color: '#ADB5BD',
   },
   quantitySection: {
     flexDirection: 'row',
@@ -174,6 +279,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  confirmBtnDisabled: {
+    backgroundColor: '#ADB5BD',
   },
   confirmBtnText: {
     color: '#FFF',

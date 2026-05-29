@@ -267,6 +267,35 @@ public class CreateSellerProductRequest
     public List<string>? ImageUrls { get; set; }
 }
 
+public class UpdateSellerProductRequest
+{
+    [Range(1, long.MaxValue)]
+    public long CategoryId { get; set; }
+
+    [Required, MaxLength(255)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    [Range(typeof(decimal), "0.01", "999999999")]
+    public decimal Price { get; set; }
+
+    public decimal? OriginalPrice { get; set; }
+
+    [Range(0, 1000000)]
+    public int StockQuantity { get; set; }
+
+    public int? WeightGrams { get; set; }
+
+    [MaxLength(100)]
+    public string? Brand { get; set; }
+
+    public List<CreateProductVariantRequest>? Variants { get; set; }
+
+    public List<string>? ImageUrls { get; set; }
+}
+
 public class CreateProductVariantRequest
 {
     [Required, MaxLength(100)]
@@ -419,4 +448,5 @@ public record SellerDashboardStats(
     decimal ConversionRate,
     decimal AverageOrderValue,
     IReadOnlyList<decimal> RevenueHistory,
-    SellerTodoStats Todo);
+    SellerTodoStats Todo,
+    int TotalOrders);

@@ -38,7 +38,7 @@ export default function useCartScreen() {
         discount: dto.discount > 0 ? `-${dto.discount}%` : undefined,
         rating: dto.rating,
         reviews: formatSold(dto.soldQuantity),
-        image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+        image: dto.image ? { uri: dto.image } : require('../../assets/images/product/product-1.png'),
       })));
     } catch (error) {
       console.error('Failed to fetch cart data:', error);

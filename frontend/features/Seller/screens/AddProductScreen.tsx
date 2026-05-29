@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AddProductHeader from '../components/addProduct/AddProductHeader';
 import ProductImagesSection from '../components/addProduct/ProductImagesSection';
 import ProductDetailsSection from '../components/addProduct/ProductDetailsSection';
@@ -22,6 +22,9 @@ const AddProductScreen: React.FC = () => {
   const [categories, setCategories] = useState<SellerCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const { id } = useLocalSearchParams();
+  const isEdit = !!id;
+  const [loadingProduct, setLoadingProduct] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [brand, setBrand] = useState<string>('');
@@ -75,9 +78,33 @@ const AddProductScreen: React.FC = () => {
     }
   };
 
+  const loadProductData = async (productId: string) => {
+    try {
+      setLoadingProduct(true);
+      const product = await sellerApi.getProductDetail(Number(productId));
+      setName(product.name);
+      setDescription(product.description || '');
+      setPrice(String(product.price));
+      setStock(String(product.stockQuantity));
+      setWeight(String(product.weightGrams || ''));
+      setSelectedCategoryId(product.categoryId);
+      setBrand(product.brand || '');
+      setVariants(product.variants || []);
+      setImages(product.images || []);
+    } catch (error: unknown) {
+      Alert.alert('Lỗi', 'Không thể tải thông tin sản phẩm.');
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
   useEffect(() => {
-    loadCategories();
-  }, []);
+    loadCategories().then(() => {
+      if (id) {
+        loadProductData(id as string);
+      }
+    });
+  }, [id]);
 
   const showComingSoon = (featureName: string) => {
     Alert.alert('Thông báo', `${featureName} sẽ được cập nhật ở bước tiếp theo.`);
@@ -127,22 +154,40 @@ const AddProductScreen: React.FC = () => {
         );
       }
 
-      await sellerApi.createProduct({
-        categoryId: selectedCategoryId,
-        name: trimmedName,
-        slug,
-        description: description.trim() || undefined,
-        price: productPrice,
-        stockQuantity: productStock,
-        weightGrams: parseNumber(weight) || undefined,
-        brand: brand || undefined,
-        variants: variants.length > 0 ? variants : undefined,
-        imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
-        originalPrice: undefined,
-      });
-      Alert.alert('Thành công', 'Đã thêm sản phẩm mới.', [
-        { text: 'OK', onPress: () => router.replace('/seller-products') },
-      ]);
+      if (isEdit) {
+        await sellerApi.updateProduct(Number(id), {
+          categoryId: selectedCategoryId,
+          name: trimmedName,
+          description: description.trim() || undefined,
+          price: productPrice,
+          stockQuantity: productStock,
+          weightGrams: parseNumber(weight) || undefined,
+          brand: brand || undefined,
+          variants: variants.length > 0 ? variants : undefined,
+          imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
+          originalPrice: undefined,
+        });
+        Alert.alert('Thành công', 'Đã cập nhật sản phẩm.', [
+          { text: 'OK', onPress: () => router.replace('/seller-products') },
+        ]);
+      } else {
+        await sellerApi.createProduct({
+          categoryId: selectedCategoryId,
+          name: trimmedName,
+          slug,
+          description: description.trim() || undefined,
+          price: productPrice,
+          stockQuantity: productStock,
+          weightGrams: parseNumber(weight) || undefined,
+          brand: brand || undefined,
+          variants: variants.length > 0 ? variants : undefined,
+          imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
+          originalPrice: undefined,
+        });
+        Alert.alert('Thành công', 'Đã thêm sản phẩm mới.', [
+          { text: 'OK', onPress: () => router.replace('/seller-products') },
+        ]);
+      }
     } catch (error: unknown) {
       Alert.alert('Thêm sản phẩm thất bại', error instanceof Error ? error.message : 'Đã xảy ra lỗi.');
     } finally {
@@ -190,10 +235,17 @@ const AddProductScreen: React.FC = () => {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>ĐĂNG SẢN PHẨM</Text>
+            <Text style={styles.submitButtonText}>{isEdit ? 'CẬP NHẬT SẢN PHẨM' : 'ĐĂNG SẢN PHẨM'}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {loadingProduct && (
+        <View style={styles.fullScreenLoading}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Đang tải dữ liệu sản phẩm...</Text>
+        </View>
+      )}
 
       <CategoryPickerModal
         visible={showCategoryModal}
@@ -258,6 +310,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
+  },
+  fullScreenLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: '600',
   },
 });
 

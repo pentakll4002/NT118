@@ -16,15 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
-import Categories, { Category } from '../common/Categories';
 import Banner from '../common/Banner';
 import SearchDetail from '../screen/SearchDetail';
 import SectionHeader from '../common/SectionHeader';
 import ProductCard, { Product } from '../common/ProductCard';
-import SpecialOffer from '../common/SpecialOffer';
-import PromotionBanner from '../common/PromotionBanner';
 import WishlistBanner from '../common/WishlistBanner';
-import NewArrivalsCard from '../common/NewArrivalsCard';
 import Skeleton from '../common/Skeleton';
 import { getProducts, getFeaturedProducts, ProductDTO, formatPrice, formatSold } from '../../lib/productApi';
 import { getCategories, CategoryDTO } from '../../lib/categoryApi';
@@ -42,7 +38,7 @@ function toCardProduct(dto: ProductDTO): Product {
     discount: dto.discount > 0 ? `Giảm ${dto.discount}%` : undefined,
     rating: dto.rating,
     reviews: formatSold(dto.soldQuantity),
-    image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+    image: dto.image ? { uri: dto.image } : require('../../assets/images/product/product-1.png'),
   };
 }
 

@@ -14,6 +14,7 @@ export default function PaymentScreen() {
       totalAmount={0} 
       productId={productId}
       quantity={quantity}
+      variantId={params.variantId ? Number(params.variantId) : undefined}
       cartItemIds={params.cartItemIds as string}
       platformVoucherIds={params.platformVoucherIds as string}
       shopVoucherId={params.shopVoucherId ? Number(params.shopVoucherId) : undefined}

@@ -19,7 +19,7 @@ function toCardProduct(dto: ProductDTO): Product {
     discount: dto.discount > 0 ? `${dto.discount}% Off` : undefined,
     rating: dto.rating,
     reviews: formatSold(dto.soldQuantity),
-    image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+    image: dto.image ? { uri: dto.image } : require('../../assets/images/product/product-1.png'),
   };
 }
 

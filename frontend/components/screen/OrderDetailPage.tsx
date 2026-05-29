@@ -166,7 +166,7 @@ const OrderDetailPage = () => {
               onPress={() => router.push(`/product/${item.productId}`)}
             >
               <Image 
-                source={item.productImage ? { uri: item.productImage } : { uri: 'https://via.placeholder.com/100' }} 
+                source={item.productImage ? { uri: item.productImage } : require('../../assets/images/product/product-1.png')} 
                 style={styles.productImage} 
               />
               <View style={styles.productInfo}>

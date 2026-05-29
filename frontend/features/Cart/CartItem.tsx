@@ -73,7 +73,7 @@ export default function CartItem({
         <Pressable style={styles.card} onPress={onPress}>
           <View style={styles.imageWrap}>
             <Image 
-              source={image} 
+              source={image ? { uri: image } : require('../../assets/images/product/product-1.png')} 
               style={styles.image} 
               contentFit="cover"
               transition={200}

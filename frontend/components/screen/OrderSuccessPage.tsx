@@ -37,7 +37,7 @@ export default function OrderSuccessPage({ isPendingPayment = false, cartItems =
           discount: dto.discount > 0 ? `-${dto.discount}%` : undefined,
           rating: dto.rating,
           reviews: formatSold(dto.soldQuantity),
-          image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+          image: dto.image ? { uri: dto.image } : require('../../assets/images/product/product-1.png'),
           imageHeight: 180,
         }));
         setRecommendedProducts(mapped);

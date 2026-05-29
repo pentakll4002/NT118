@@ -213,7 +213,6 @@ const ProductListScreen: React.FC = () => {
         onSearchChange={handleSearch}
         onSettingsPress={() => console.log('Settings pressed')}
         onFilterPress={() => console.log('Filter pressed')}
-        onBackPress={() => router.back()}
       />
 
       {loading && !refreshing ? (

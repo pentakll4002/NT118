@@ -11,7 +11,7 @@ interface ProductImageGalleryProps {
 }
 
 const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({ images, activeIndex, onScroll, onImagePress }) => {
-  const thumbnails = images.length > 0 ? images : [];
+  const thumbnails = images.length > 0 ? images : ['PLACEHOLDER'];
 
   return (
     <View style={styles.imageGallery}>
@@ -26,7 +26,11 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({ images, activ
         }}
         renderItem={({ item }) => (
           <TouchableOpacity activeOpacity={0.9} onPress={onImagePress}>
-            <Image source={{ uri: item }} style={styles.mainImage} resizeMode="cover" />
+            <Image 
+              source={item === 'PLACEHOLDER' ? require('../../assets/images/product/product-1.png') : { uri: item }} 
+              style={styles.mainImage} 
+              resizeMode="cover" 
+            />
           </TouchableOpacity>
         )}
         keyExtractor={(_, index) => index.toString()}

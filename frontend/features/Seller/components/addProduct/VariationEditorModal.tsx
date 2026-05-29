@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -29,6 +29,13 @@ const VariationEditorModal: React.FC<VariationEditorModalProps> = ({
   const [localVariants, setLocalVariants] = useState<CreateProductVariantPayload[]>(
     variants.length > 0 ? [...variants] : []
   );
+
+  // Sync local state when modal opens or variants prop changes
+  useEffect(() => {
+    if (visible) {
+      setLocalVariants(variants.length > 0 ? [...variants] : []);
+    }
+  }, [visible, variants]);
 
   const addVariant = () => {
     setLocalVariants([
@@ -65,7 +72,13 @@ const VariationEditorModal: React.FC<VariationEditorModalProps> = ({
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập đầy đủ Tên và Giá trị cho tất cả phân loại.');
       return;
     }
-    onSave(localVariants);
+
+    const cleaned = localVariants.map((v) => ({
+      ...v,
+      name: v.name.trim().normalize('NFC'),
+      value: v.value.trim().normalize('NFC'),
+    }));
+    onSave(cleaned);
     onClose();
   };
 

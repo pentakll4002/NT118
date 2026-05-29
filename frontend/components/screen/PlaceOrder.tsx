@@ -5,16 +5,23 @@ import { getProductById, ProductDTO, formatPriceFull } from '../../lib/productAp
 import { toggleFavorite, getFavoriteStatus } from '../../lib/wishlistApi';
 import { useRouter, Link } from 'expo-router';
 
+// Components
+import ShopVoucherModal from '../common/ShopVoucherModal';
+
 interface PlaceOrderProps {
   productId?: number;
   quantity?: number;
+  variantId?: number;
 }
 
-const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) => {
+const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1, variantId }) => {
   const [product, setProduct] = useState<ProductDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [qty, setQty] = useState(quantity);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState<any | null>(null);
+  const selectedVariant = product?.variants?.find(v => v.id === variantId);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,9 +53,11 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
     }
   };
 
-  const orderAmount = product ? product.price * qty : 0;
+  const discountAmount = selectedVoucher ? (selectedVoucher.discountValue || 0) : 0;
+  const unitPrice = product ? (product.price + (selectedVariant?.priceModifier || 0)) : 0;
+  const orderAmount = unitPrice * qty;
   const deliveryFee = 0;
-  const totalAmount = orderAmount + deliveryFee;
+  const totalAmount = Math.max(0, orderAmount + deliveryFee - discountAmount);
 
   // Delivery estimate: ~5 days from now
   const deliveryDate = new Date();
@@ -84,10 +93,14 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
         {/* Product Component */}
         <View style={styles.productContainer}>
           <View style={styles.productImageWrapper}>
-            {product?.image ? (
-              <Image source={{ uri: product.image }} style={styles.productImageFull} resizeMode="cover" />
+            {product?.image || (product?.thumbnails && product.thumbnails.length > 0) ? (
+              <Image 
+                source={{ uri: product.image || product.thumbnails![0] }} 
+                style={styles.productImageFull} 
+                resizeMode="cover" 
+              />
             ) : (
-              <View style={styles.productImagePlaceholder} />
+              <Image source={require('../../assets/images/product/product-1.png')} style={styles.productImageFull} resizeMode="cover" />
             )}
           </View>
 
@@ -99,11 +112,30 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
               {product?.brand || product?.description?.slice(0, 40) || ''}
             </Text>
 
+            {selectedVariant && (
+              <View style={styles.variantBadge}>
+                <Text style={styles.variantBadgeText}>
+                  {selectedVariant.name}: {selectedVariant.value}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.dropdownsRow}>
-              <TouchableOpacity style={styles.dropdownButton}>
-                <Text style={styles.dropdownText}>Qty <Text style={styles.dropdownBold}>{qty}</Text></Text>
-                <Ionicons name="chevron-down" size={12} color="#333" />
-              </TouchableOpacity>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity 
+                  style={styles.qtyBtnSmall} 
+                  onPress={() => setQty(Math.max(1, qty - 1))}
+                >
+                  <Ionicons name="remove" size={16} color="#333" />
+                </TouchableOpacity>
+                <Text style={styles.qtyTextSmall}>{qty}</Text>
+                <TouchableOpacity 
+                  style={styles.qtyBtnSmall} 
+                  onPress={() => setQty(qty + 1)}
+                >
+                  <Ionicons name="add" size={16} color="#333" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.deliveryRow}>
@@ -119,10 +151,10 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
         <View style={styles.couponContainer}>
           <View style={styles.couponLeft}>
             <Ionicons name="pricetag-outline" size={22} color="#F83758" />
-            <Text style={styles.couponText}>  Mã giảm giá</Text>
+            <Text style={styles.couponText}>  {selectedVoucher ? selectedVoucher.code : 'Mã giảm giá'}</Text>
           </View>
-          <TouchableOpacity>
-            <Text style={styles.selectText}>Chọn</Text>
+          <TouchableOpacity onPress={() => setShowVoucherModal(true)}>
+            <Text style={styles.selectText}>{selectedVoucher ? 'Thay đổi' : 'Chọn'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -137,6 +169,13 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
             <Text style={styles.detailLabel}>Tạm tính</Text>
             <Text style={styles.detailValue}>{formatPriceFull(orderAmount)}</Text>
           </View>
+
+          {discountAmount > 0 && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Giảm giá</Text>
+              <Text style={styles.actionText}>-{formatPriceFull(discountAmount)}</Text>
+            </View>
+          )}
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Phí vận chuyển</Text>
@@ -166,12 +205,24 @@ const PlaceOrder: React.FC<PlaceOrderProps> = ({ productId = 1, quantity = 1 }) 
             <Text style={styles.viewDetailsText}>Xem chi tiết</Text>
           </TouchableOpacity>
         </View>
-        <Link href={{ pathname: '/payment', params: { productId, quantity: qty } }} asChild>
+        <Link href={{ pathname: '/payment', params: { productId, quantity: qty, variantId } }} asChild>
           <TouchableOpacity style={styles.checkoutButton} activeOpacity={0.8}>
             <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
           </TouchableOpacity>
         </Link>
       </View>
+
+      <ShopVoucherModal 
+        visible={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        shopId={product?.shopId}
+        mode="select"
+        onSelectVoucher={(v) => {
+          setSelectedVoucher(v);
+          setShowVoucherModal(false);
+        }}
+        selectedVoucherId={selectedVoucher?.id}
+      />
     </SafeAreaView>
   );
 };
@@ -382,6 +433,36 @@ const styles = StyleSheet.create({
   checkoutButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+  },
+  qtyBtnSmall: {
+    padding: 8,
+  },
+  qtyTextSmall: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  variantBadge: {
+    backgroundColor: '#FFF0F3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  variantBadgeText: {
+    fontSize: 11,
+    color: '#F83758',
     fontWeight: '600',
   },
 });

@@ -23,7 +23,7 @@ const DashboardScreen: React.FC = () => {
   const { stats, loading, refreshing, error, onRefresh, retry } =
     useSellerDashboard();
   const hasBusinessData =
-    !!stats && (stats.todayOrders > 0 || stats.todayRevenue > 0);
+    !!stats && (stats.todayOrders > 0 || stats.todayRevenue > 0 || (stats.totalOrders || 0) > 0);
 
   const { useFocusEffect } = require('expo-router');
 

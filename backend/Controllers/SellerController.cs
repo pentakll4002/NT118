@@ -51,7 +51,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             var todayOrdersQuery = db.Orders.Where(o => o.ShopId == shop.Id && o.OrderedAt >= today);
             var todayOrdersCount = await todayOrdersQuery.CountAsync(cancellationToken);
             var todayRevenue = await todayOrdersQuery
-                .Where(o => o.Status != OrderStatus.cancelled)
+                .Where(o => o.Status != OrderStatus.cancelled && o.Status != OrderStatus.refunded)
                 .SumAsync(o => (decimal?)o.TotalAmount, cancellationToken) ?? 0;
 
             // 2. Todo Stats
@@ -69,7 +69,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 var dayEnd = dayStart.AddDays(1);
                 var dayRevenue = await db.Orders
                     .AsNoTracking()
-                    .Where(o => o.ShopId == shop.Id && o.Status != OrderStatus.cancelled && o.OrderedAt >= dayStart && o.OrderedAt < dayEnd)
+                    .Where(o => o.ShopId == shop.Id && (o.Status == OrderStatus.delivered || o.PaymentStatus == PaymentStatus.paid) && o.Status != OrderStatus.cancelled)
+                    .Where(o => o.OrderedAt >= dayStart && o.OrderedAt < dayEnd)
                     .Select(o => (decimal?)o.TotalAmount)
                     .SumAsync(cancellationToken) ?? 0;
                 revenueHistory.Add(dayRevenue);
@@ -79,9 +80,9 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             // In a real app, we'd track visits/sessions. For now, we use a ratio of orders to total products or similar.
             decimal conversionRate = 0;
             var totalShopProducts = await db.Products.CountAsync(p => p.ShopId == shop.Id, cancellationToken);
+            var totalOrders = await db.Orders.CountAsync(o => o.ShopId == shop.Id, cancellationToken);
             if (totalShopProducts > 0)
             {
-                var totalOrders = await db.Orders.CountAsync(o => o.ShopId == shop.Id, cancellationToken);
                 conversionRate = Math.Min(10.0m, (decimal)totalOrders / totalShopProducts * 5.0m);
             }
             if (conversionRate == 0) conversionRate = 2.5m;
@@ -99,7 +100,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                     CancelledOrders: cancelledOrders,
                     ReturnRequests: returnRequests,
                     OutOfStockProducts: outOfStockProducts
-                )
+                ),
+                TotalOrders: totalOrders
             );
 
             return Ok(response);
@@ -154,6 +156,111 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
             .ToListAsync(cancellationToken);
 
         return Ok(products);
+    }
+
+    [HttpGet("products/{id:long}")]
+    public async Task<IActionResult> GetProductDetail(long id, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var product = await db.Products
+            .AsNoTracking()
+            .Where(x => x.Id == id && db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
+            .Select(x => new
+            {
+                x.Id,
+                x.CategoryId,
+                x.Name,
+                x.Slug,
+                x.Description,
+                x.Price,
+                x.OriginalPrice,
+                x.StockQuantity,
+                x.WeightGrams,
+                x.Brand,
+                x.Status,
+                Images = x.Images.OrderBy(i => i.SortOrder).Select(i => i.ImageUrl).ToList(),
+                Variants = x.Variants.Select(v => new
+                {
+                    v.Id,
+                    v.Name,
+                    v.Value,
+                    v.PriceModifier,
+                    v.StockQuantity,
+                    v.Sku
+                }).ToList()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (product is null)
+            return NotFound(new { message = "Không tìm thấy sản phẩm." });
+
+        return Ok(product);
+    }
+
+    [HttpPut("products/{id:long}")]
+    public async Task<IActionResult> UpdateSellerProduct(long id, [FromBody] UpdateSellerProductRequest body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var product = await db.Products
+            .Include(x => x.Images)
+            .Include(x => x.Variants)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        if (product is null)
+            return NotFound(new { message = "Không tìm thấy sản phẩm." });
+
+        var isSellerOfProduct = await db.Shops.AnyAsync(
+            x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
+        if (!isSellerOfProduct)
+            return Forbid();
+
+        var now = DateTime.UtcNow;
+        product.CategoryId = body.CategoryId;
+        product.Name = body.Name;
+        product.Description = body.Description;
+        product.Price = body.Price;
+        product.OriginalPrice = body.OriginalPrice;
+        product.StockQuantity = body.StockQuantity;
+        product.WeightGrams = body.WeightGrams;
+        product.Brand = body.Brand;
+        product.UpdatedAt = now;
+
+        // Update variants
+        db.ProductVariants.RemoveRange(product.Variants);
+        if (body.Variants != null && body.Variants.Count > 0)
+        {
+            product.Variants = body.Variants.Select(v => new ProductVariant
+            {
+                ProductId = product.Id,
+                Name = v.Name,
+                Value = v.Value,
+                PriceModifier = v.PriceModifier,
+                StockQuantity = v.StockQuantity,
+                Sku = v.Sku,
+                CreatedAt = now
+            }).ToList();
+        }
+
+        // Update images
+        db.ProductImages.RemoveRange(product.Images);
+        if (body.ImageUrls != null && body.ImageUrls.Count > 0)
+        {
+            product.Images = body.ImageUrls.Select((url, index) => new ProductImage
+            {
+                ProductId = product.Id,
+                ImageUrl = url,
+                IsMain = index == 0,
+                SortOrder = index,
+                CreatedAt = now
+            }).ToList();
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(new { message = "Cập nhật sản phẩm thành công." });
     }
 
     [HttpGet("brands")]
@@ -419,14 +526,16 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
+        var isPaidOrDelivered = (Order x) => x.PaymentStatus == PaymentStatus.paid || x.Status == OrderStatus.delivered;
+
         var totalRevenue = await db.Orders
             .AsNoTracking()
-            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId) && x.PaymentStatus == PaymentStatus.paid)
+            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId) && (x.PaymentStatus == PaymentStatus.paid || x.Status == OrderStatus.delivered))
             .SumAsync(x => (decimal?)x.TotalAmount, cancellationToken) ?? 0;
 
         var monthly = await db.Orders
             .AsNoTracking()
-            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId) && x.PaymentStatus == PaymentStatus.paid)
+            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId) && (x.PaymentStatus == PaymentStatus.paid || x.Status == OrderStatus.delivered))
             .GroupBy(x => new { x.OrderedAt.Year, x.OrderedAt.Month })
             .Select(g => new
             {

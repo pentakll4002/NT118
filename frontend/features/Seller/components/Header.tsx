@@ -6,36 +6,46 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface HeaderProps {
   shopName: string;
   onBackPress?: () => void;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onRightPress?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ shopName, onBackPress }) => {
+const Header: React.FC<HeaderProps> = ({ shopName, onBackPress, rightIcon, onRightPress }) => {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
       <View style={styles.leftContainer}>
         {onBackPress && (
-          <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#2c3e50" />
+          <TouchableOpacity onPress={onBackPress} style={styles.headerIconButton}>
+            <Ionicons name="chevron-back" size={24} color="#1B1530" />
           </TouchableOpacity>
         )}
         <View style={styles.shopContainer}>
           <View style={styles.shopIcon}>
-            <Ionicons name="storefront" size={20} color="#3498db" />
+            <Ionicons name="storefront" size={20} color="#F73658" />
           </View>
-          <Text style={styles.shopName}>{shopName}</Text>
+          <Text style={styles.shopName} numberOfLines={1}>{shopName}</Text>
         </View>
       </View>
 
       <View style={styles.actionContainer}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="notifications-outline" size={24} color="#2c3e50" />
-          <View style={styles.badge} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="settings-outline" size={24} color="#2c3e50" />
-        </TouchableOpacity>
+        {rightIcon ? (
+          <TouchableOpacity style={styles.headerIconButton} onPress={onRightPress}>
+            <Ionicons name={rightIcon} size={24} color="#F73658" />
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="notifications-outline" size={24} color="#1B1530" />
+              <View style={styles.badge} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="settings-outline" size={24} color="#1B1530" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -56,45 +66,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: 8,
-    padding: 4,
+  headerIconButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFF1F3',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   shopContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 4,
   },
   shopIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#ebf5fb',
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#FFF1F3',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   shopName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2c3e50',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1B1530',
+    maxWidth: 160,
   },
   actionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconButton: {
-    marginLeft: 16,
+    marginLeft: 12,
     position: 'relative',
+    padding: 4,
   },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#e74c3c',
-    borderWidth: 2,
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F73658',
+    borderWidth: 1.5,
     borderColor: '#fff',
   },
 });

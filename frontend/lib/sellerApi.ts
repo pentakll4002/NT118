@@ -16,17 +16,25 @@ export interface SellerDashboardStats {
   averageOrderValue: number;
   revenueHistory: number[];
   todo: SellerTodoStats;
+  totalOrders: number;
 }
 
 export interface SellerProduct {
   id: number;
   name: string;
   slug: string;
+  description?: string;
+  categoryId: number;
   price: number;
+  originalPrice?: number;
   stockQuantity: number;
   soldQuantity: number;
+  weightGrams?: number;
+  brand?: string;
   status: string;
   mainImageUrl?: string | null;
+  images?: string[];
+  variants?: CreateProductVariantPayload[];
 }
 
 export interface SellerOrder {
@@ -107,6 +115,19 @@ export interface CreateSellerProductPayload {
   imageUrls?: string[];
 }
 
+export interface UpdateSellerProductPayload {
+  categoryId: number;
+  name: string;
+  description?: string;
+  price: number;
+  originalPrice?: number;
+  stockQuantity: number;
+  weightGrams?: number;
+  brand?: string;
+  variants?: CreateProductVariantPayload[];
+  imageUrls?: string[];
+}
+
 export interface CreateProductVariantPayload {
   name: string;
   value: string;
@@ -173,6 +194,11 @@ export const sellerApi = {
     return response.data;
   },
 
+  getProductDetail: async (id: number): Promise<SellerProduct> => {
+    const response = await apiClient.get<SellerProduct>(`/api/seller/products/${id}`);
+    return response.data;
+  },
+
   getOrderDetail: async (orderId: number): Promise<SellerOrderDetail> => {
     const response = await apiClient.get<SellerOrderDetail>(`/api/seller/orders/${orderId}`);
     return response.data;
@@ -193,6 +219,11 @@ export const sellerApi = {
 
   createProduct: async (payload: CreateSellerProductPayload): Promise<CreateSellerProductResponse> => {
     const response = await apiClient.post<CreateSellerProductResponse>('/api/seller/products', payload);
+    return response.data;
+  },
+
+  updateProduct: async (id: number, payload: UpdateSellerProductPayload): Promise<{ message: string }> => {
+    const response = await apiClient.put<{ message: string }>(`/api/seller/products/${id}`, payload);
     return response.data;
   },
 

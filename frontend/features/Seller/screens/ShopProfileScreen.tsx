@@ -10,10 +10,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import BottomTabBar from '../components/BottomTabBar';
+import Header from '../components/Header';
 import { sellerApi, ShopProfile } from '@/lib/sellerApi';
+import { Colors } from '@/constants/theme';
 
 const ShopProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -41,6 +45,8 @@ const ShopProfileScreen: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
       await sellerApi.updateShopProfile({
         name: profile.name,
         description: profile.description,
@@ -50,8 +56,11 @@ const ShopProfileScreen: React.FC = () => {
         businessHours: profile.businessHours,
         pickupAddress: profile.pickupAddress,
       });
+      
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Thành công', 'Đã cập nhật thông tin cửa hàng');
     } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể lưu thay đổi');
     } finally {
       setSaving(false);
@@ -76,139 +85,183 @@ const ShopProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
-          <Text style={styles.headerTitle}>Hồ sơ Shop</Text>
-          <TouchableOpacity style={styles.headerAction}>
-            <Ionicons name="checkmark" size={18} color="#3b82f6" />
-          </TouchableOpacity>
-        </View>
+      <Header 
+        shopName={profile.name || 'Hồ sơ Shop'} 
+        rightIcon="checkmark"
+        onRightPress={handleSave}
+      />
+      
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+      >
 
-        <View style={styles.cover} />
-        <View style={styles.identitySection}>
-          <View style={styles.avatarWrap}>
-            <View style={styles.avatar} />
-            <TouchableOpacity style={styles.editAvatarBtn}>
-              <Ionicons name="camera" size={13} color="#fff" />
+        <View style={styles.topSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarInner}>
+              <MaterialCommunityIcons name="storefront-outline" size={32} color={Colors.light.primary} />
+            </View>
+            <TouchableOpacity style={styles.editAvatarBtn} onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+              <Ionicons name="camera" size={10} color="#fff" />
             </TouchableOpacity>
           </View>
+          
           <View style={styles.identityText}>
-            <Text style={styles.shopName}>{profile.name || 'Shop Name'}</Text>
-            <Text style={styles.badge}>{profile.isVerified ? 'NHÀ BÁN HÀNG UY TÍN' : 'CỬA HÀNG MỚI'}</Text>
+            <Text style={styles.shopNameText}>{profile.name || 'Cửa hàng của tôi'}</Text>
+            <View style={styles.badgeRow}>
+              <View style={[styles.statusBadge, profile.isVerified ? styles.verifiedBadge : styles.newBadge]}>
+                <MaterialCommunityIcons 
+                  name={profile.isVerified ? "check-decagram" : "star-circle"} 
+                  size={12} 
+                  color="#fff" 
+                />
+                <Text style={styles.statusBadgeText}>
+                  {profile.isVerified ? 'NHÀ BÁN HÀNG UY TÍN' : 'CỬA HÀNG MỚI'}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Pending approval banner */}
         {profile.status === 'pending' && (
           <View style={styles.pendingBanner}>
-            <Ionicons name="time-outline" size={18} color="#92400e" />
-            <View style={{ flex: 1, marginLeft: 8 }}>
+            <View style={styles.pendingIconBg}>
+              <Ionicons name="time" size={20} color="#D97706" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.pendingTitle}>Đang chờ duyệt</Text>
-              <Text style={styles.pendingSubtitle}>Cửa hàng của bạn đang được admin xem xét. Thời gian duyệt thường 1–3 ngày làm việc.</Text>
+              <Text style={styles.pendingSubtitle}>Hồ sơ của bạn đang được đội ngũ admin xem xét. Quá trình này thường mất 1–3 ngày làm việc.</Text>
             </View>
           </View>
         )}
 
+        {/* Progress Card */}
         <View style={styles.progressCard}>
-          <Text style={styles.progressLabel}>Mức độ hoàn thiện hồ sơ</Text>
-          <Text style={styles.progressValue}>{completion}%</Text>
-        </View>
-
-        <View style={styles.formCard}>
-          <Text style={styles.fieldLabel}>TÊN SHOP</Text>
-          <TextInput
-            value={profile.name}
-            onChangeText={(text) => setProfile((prev) => ({ ...prev, name: text }))}
-            style={styles.fieldInput}
-            placeholder="Nhập tên shop"
-            placeholderTextColor="#9ca3af"
-          />
-
-          <Text style={styles.fieldLabel}>MÔ TẢ SHOP</Text>
-          <TextInput
-            value={profile.description}
-            onChangeText={(text) => setProfile((prev) => ({ ...prev, description: text }))}
-            style={[styles.fieldInput, styles.textArea]}
-            multiline
-            textAlignVertical="top"
-            placeholder="Mô tả ngắn về shop..."
-            placeholderTextColor="#9ca3af"
-          />
-
-          <Text style={styles.fieldLabel}>ĐỊA CHỈ</Text>
-          <View style={styles.addressRow}>
-            <Ionicons name="location" size={16} color="#ef476f" />
-            <TextInput
-              value={profile.address}
-              onChangeText={(text) => setProfile((prev) => ({ ...prev, address: text }))}
-              style={styles.addressInput}
-              placeholder="Địa chỉ shop"
-              placeholderTextColor="#9ca3af"
-            />
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressLabel}>Độ hoàn thiện hồ sơ</Text>
+            <Text style={styles.progressValueText}>{completion}%</Text>
           </View>
-
-          <Text style={styles.fieldLabel}>SỐ ĐIỆN THOẠI</Text>
-          <View style={styles.addressRow}>
-            <Ionicons name="call-outline" size={16} color="#ef476f" />
-            <TextInput
-              value={profile.phone}
-              onChangeText={(text) => setProfile((prev) => ({ ...prev, phone: text }))}
-              style={styles.addressInput}
-              keyboardType="phone-pad"
-              placeholder="Số điện thoại hỗ trợ khách hàng"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          <Text style={styles.fieldLabel}>GIỜ HOẠT ĐỘNG</Text>
-          <View style={styles.addressRow}>
-            <Ionicons name="time-outline" size={16} color="#ef476f" />
-            <TextInput
-              value={profile.businessHours}
-              onChangeText={(text) => setProfile((prev) => ({ ...prev, businessHours: text }))}
-              style={styles.addressInput}
-              placeholder="Ví dụ: 08:00 - 22:00"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          <Text style={styles.fieldLabel}>ĐỊA CHỈ LẤY HÀNG</Text>
-          <View style={styles.addressRow}>
-            <Ionicons name="cube-outline" size={16} color="#ef476f" />
-            <TextInput
-              value={profile.pickupAddress}
-              onChangeText={(text) => setProfile((prev) => ({ ...prev, pickupAddress: text }))}
-              style={styles.addressInput}
-              placeholder="Địa chỉ kho hàng / nơi lấy hàng"
-              placeholderTextColor="#9ca3af"
-            />
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${completion}%`, backgroundColor: Colors.light.primary }]} />
           </View>
         </View>
 
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <MaterialCommunityIcons name="shield-check-outline" size={20} color="#3b82f6" />
-            <Text style={styles.metricTitle}>Xác thực Shop</Text>
-            <Text style={styles.metricSub}>Đã xác thực 100%</Text>
+        {/* Form Sections */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Feather name="shopping-bag" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Tên Shop</Text>
+              </View>
+              <TextInput
+                value={profile.name}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, name: text }))}
+                style={styles.textInput}
+                placeholder="Ví dụ: Elite Store"
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { borderBottomWidth: 0 }]}>
+              <View style={styles.labelRow}>
+                <Feather name="file-text" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Mô tả Shop</Text>
+              </View>
+              <TextInput
+                value={profile.description}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, description: text }))}
+                style={[styles.textInput, styles.textArea]}
+                multiline
+                placeholder="Kể cho khách hàng nghe về shop của bạn..."
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
           </View>
-          <View style={[styles.metricCard, styles.metricCardEmphasis]}>
-            <MaterialCommunityIcons name="bullhorn-outline" size={20} color="#ef476f" />
-            <Text style={styles.metricTitle}>Quảng bá Shop</Text>
-            <Text style={styles.metricSub}>Tăng khả năng tiếp cận</Text>
+
+          <Text style={styles.sectionTitle}>Liên hệ & Địa chỉ</Text>
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Feather name="phone" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Số điện thoại</Text>
+              </View>
+              <TextInput
+                value={profile.phone}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, phone: text }))}
+                style={styles.textInput}
+                keyboardType="phone-pad"
+                placeholder="Nhập số điện thoại"
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Feather name="map-pin" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Địa chỉ Shop</Text>
+              </View>
+              <TextInput
+                value={profile.address}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, address: text }))}
+                style={styles.textInput}
+                placeholder="Địa chỉ hiển thị trên shop"
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { borderBottomWidth: 0 }]}>
+              <View style={styles.labelRow}>
+                <Feather name="truck" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Địa chỉ lấy hàng</Text>
+              </View>
+              <TextInput
+                value={profile.pickupAddress}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, pickupAddress: text }))}
+                style={styles.textInput}
+                placeholder="Địa chỉ kho hàng"
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Vận hành</Text>
+          <View style={styles.card}>
+            <View style={[styles.inputGroup, { borderBottomWidth: 0 }]}>
+              <View style={styles.labelRow}>
+                <Feather name="clock" size={16} color={Colors.light.primary} />
+                <Text style={styles.inputLabel}>Giờ hoạt động</Text>
+              </View>
+              <TextInput
+                value={profile.businessHours}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, businessHours: text }))}
+                style={styles.textInput}
+                placeholder="Ví dụ: 08:00 - 22:00"
+                placeholderTextColor="#A29DBA"
+              />
+            </View>
           </View>
         </View>
+
+        <View style={styles.footerSpacing} />
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {/* Floating Action Button for Saving */}
+      <View style={[styles.fabContainer, { bottom: Math.max(insets.bottom + 85, 95) }]}>
         <TouchableOpacity 
-          style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+          style={[styles.saveFab, saving && styles.disabledFab]} 
           onPress={handleSave}
           disabled={saving}
+          activeOpacity={0.8}
         >
           {saving ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.saveButtonText}>LƯU THAY ĐỔI</Text>
+            <>
+              <Ionicons name="save" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.saveFabText}>Lưu thay đổi</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -221,232 +274,237 @@ const ShopProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f4f8',
+    backgroundColor: '#F8F7FF',
   },
   scrollContent: {
-    paddingBottom: 190,
+    paddingBottom: 40,
   },
-  header: {
+  topSection: {
     backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: 'rgba(27, 21, 48, 0.03)',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  headerAction: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#e8f1ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cover: {
-    height: 130,
-    marginHorizontal: 14,
-    marginTop: 10,
-    borderRadius: 10,
-    backgroundColor: '#d1d5db',
-  },
-  identitySection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 18,
-    marginTop: -22,
-  },
-  avatarWrap: {
-    width: 82,
-    height: 82,
-    borderRadius: 6,
+  avatarContainer: {
+    width: 68,
+    height: 68,
+    borderRadius: 18,
     backgroundColor: '#fff',
+    padding: 3,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarInner: {
+    flex: 1,
+    borderRadius: 15,
+    backgroundColor: '#FFF1F3',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#dbe1ea',
-  },
-  avatar: {
-    width: 74,
-    height: 74,
-    borderRadius: 4,
-    backgroundColor: '#cbd5e1',
   },
   editAvatarBtn: {
     position: 'absolute',
-    right: -8,
-    bottom: -8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#3b82f6',
+    bottom: -1,
+    right: -1,
+    backgroundColor: Colors.light.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   identityText: {
-    marginLeft: 12,
     flex: 1,
+    marginLeft: 16,
+    paddingBottom: 4,
   },
-  shopName: {
-    fontSize: 34,
-    lineHeight: 36,
-    fontWeight: '800',
-    color: '#1f2937',
+  shopNameText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1B1530',
+    marginBottom: 4,
   },
-  pendingBanner: {
-    margin: 14,
-    marginTop: 12,
-    backgroundColor: '#fffbeb',
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    borderRadius: 10,
-    padding: 12,
+  badgeRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
   },
-  pendingTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#92400e',
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  pendingSubtitle: {
-    fontSize: 12,
-    color: '#92400e',
-    marginTop: 2,
-    lineHeight: 17,
+  verifiedBadge: {
+    backgroundColor: Colors.light.primary,
   },
-  badge: {
-    marginTop: 2,
-    fontSize: 12,
-    color: '#ef476f',
-    fontWeight: '700',
-    letterSpacing: 0.7,
+  newBadge: {
+    backgroundColor: '#FF7C7C',
+  },
+  statusBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    marginLeft: 4,
   },
   progressCard: {
-    marginTop: 14,
-    marginHorizontal: 14,
+    margin: 16,
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#1B1530',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   progressLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-  progressValue: {
-    fontSize: 16,
-    color: '#3b82f6',
-    fontWeight: '800',
-  },
-  formCard: {
-    marginTop: 10,
-    marginHorizontal: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 12,
-  },
-  fieldLabel: {
-    marginTop: 8,
-    marginBottom: 6,
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  fieldInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    fontSize: 18,
-    color: '#374151',
-    fontWeight: '600',
-    paddingVertical: 8,
-  },
-  textArea: {
-    minHeight: 90,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    paddingBottom: 7,
-    gap: 8,
-  },
-  addressInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  metricsRow: {
-    marginTop: 12,
-    marginHorizontal: 14,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 12,
-    alignItems: 'center',
-  },
-  metricCardEmphasis: {
-    borderColor: '#fecdd3',
-    backgroundColor: '#fff7f8',
-  },
-  metricTitle: {
-    marginTop: 6,
     fontSize: 14,
     fontWeight: '700',
-    color: '#334155',
+    color: '#1B1530',
   },
-  metricSub: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
+  progressValueText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.light.primary,
   },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 74,
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#FFF1F3',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#7C5CFF',
+    borderRadius: 4,
+  },
+  sectionContainer: {
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#A29DBA',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  card: {
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingHorizontal: 14,
-    paddingTop: 10,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#1B1530',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  saveButton: {
-    backgroundColor: '#3b82f6',
-    height: 46,
-    borderRadius: 8,
+  inputGroup: {
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDF2F4',
+    paddingBottom: 12,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1B1530',
+    marginLeft: 8,
+  },
+  textInput: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1B1530',
+    paddingHorizontal: 0,
+    paddingVertical: 4,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  footerSpacing: {
+    height: 120,
+  },
+  fabContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    alignItems: 'center',
+  },
+  saveFab: {
+    backgroundColor: Colors.light.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 8,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  saveFabText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  disabledFab: {
+    opacity: 0.6,
+  },
+  pendingBanner: {
+    margin: 16,
+    marginBottom: 0,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pendingIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveButtonText: {
-    color: '#fff',
+  pendingTitle: {
     fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    color: '#92400E',
+  },
+  pendingSubtitle: {
+    fontSize: 12,
+    color: '#B45309',
+    marginTop: 2,
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });
 

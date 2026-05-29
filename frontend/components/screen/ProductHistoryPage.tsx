@@ -42,13 +42,10 @@ const ProductHistoryPage = () => {
       style={styles.itemCard}
       onPress={() => router.push(`/product/${item.productId}`)}
     >
-      {item.mainImageUrl ? (
-        <Image source={{ uri: item.mainImageUrl }} style={styles.itemImage} />
-      ) : (
-        <View style={[styles.itemImage, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Ionicons name="image-outline" size={24} color="#CCC" />
-        </View>
-      )}
+      <Image 
+        source={item.mainImageUrl ? { uri: item.mainImageUrl } : require('../../assets/images/product/product-1.png')} 
+        style={styles.itemImage} 
+      />
       <View style={styles.itemInfo}>
         <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
         <Text style={styles.itemTime}>

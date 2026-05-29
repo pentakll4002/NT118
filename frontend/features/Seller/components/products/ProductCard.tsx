@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 export type ProductStatus = 'live' | 'sold_out' | 'reviewing';
 
@@ -15,9 +16,9 @@ export interface Product {
 
 /** Map status → display label */
 const statusLabel: Record<ProductStatus, string> = {
-  live: 'LIVE',
-  sold_out: 'SOLD OUT',
-  reviewing: 'REVIEWING',
+  live: 'ĐANG BÁN',
+  sold_out: 'HẾT HÀNG',
+  reviewing: 'ĐANG DUYỆT',
 };
 
 /** Map status → badge colour */
@@ -46,7 +47,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onHide, onDe
   return (
     <View style={styles.container}>
       {/* ——— Product image ——— */}
-      <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+      <Image 
+        source={product.image ? { uri: product.image } : require('../../../../assets/images/product/product-1.png')} 
+        style={styles.image} 
+        contentFit="cover"
+      />
 
       {/* ——— Info section ——— */}
       <View style={styles.infoContainer}>
@@ -86,7 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onHide, onDe
           {!showActions ? (
             <>
               <TouchableOpacity style={styles.editButton} onPress={() => onEdit?.(product)}>
-                <Text style={styles.editText}>EDIT</Text>
+                <Text style={styles.editText}>CHỈNH SỬA</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowActions(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="ellipsis-horizontal" size={20} color="#95a5a6" />

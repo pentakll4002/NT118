@@ -25,11 +25,12 @@ interface PaymentPageProps {
   cartItemIds?: string;
   platformVoucherIds?: string;
   shopVoucherId?: number;
+  variantId?: number;
 }
 
 type ScreenState = 'payment' | 'address_selection' | 'add_address' | 'success';
 
-export default function PaymentPage({ onClose, totalAmount, productId, quantity, cartItemIds, platformVoucherIds, shopVoucherId }: PaymentPageProps) {
+export default function PaymentPage({ onClose, totalAmount, productId, quantity, cartItemIds, platformVoucherIds, shopVoucherId, variantId }: PaymentPageProps) {
   const [activeScreen, setActiveScreen] = useState<ScreenState>('payment');
   const [insuranceSelected, setInsuranceSelected] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -67,14 +68,18 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
         const response = await apiClient.get(`/api/products/${productId}`);
         const prod = response.data?.data || response.data;
         if (prod) {
+          const variant = prod.variants?.find((v: any) => v.id === variantId);
           setCartItems([{
             id: -1,
             productId: prod.id,
             productName: prod.name,
-            unitPrice: prod.price,
+            unitPrice: prod.price + (variant?.priceModifier || 0),
             quantity: quantity,
             mainImageUrl: prod.image,
             shopId: prod.shopId,
+            variantId: variantId,
+            variantName: variant?.name,
+            variantValue: variant?.value,
           }]);
         }
       } catch (error) {

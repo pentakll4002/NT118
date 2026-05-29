@@ -53,6 +53,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
   // Modal states
   const [isSelectionModalVisible, setIsSelectionModalVisible] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>(undefined);
   const [modalMode, setModalMode] = useState<'cart' | 'buy'>('cart');
   const [showShopVoucherModal, setShowShopVoucherModal] = useState(false);
 
@@ -96,7 +97,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
             discount: dto.discount > 0 ? `${dto.discount}% Off` : undefined,
             rating: dto.rating,
             reviews: formatSold(dto.soldQuantity),
-            image: dto.image ? { uri: dto.image } : require('../../assets/images/Group 34010.png'),
+            image: dto.image ? { uri: dto.image } : require('../../assets/images/product/product-1.png'),
             imageHeight: 180,
           }))
       );
@@ -151,7 +152,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
     if (modalMode === 'cart') {
       try {
         setAddingToCart(true);
-        await addToCart(productId, selectedQuantity);
+        await addToCart(productId, selectedQuantity, selectedVariantId);
         setIsSelectionModalVisible(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Thành công', 'Đã thêm sản phẩm vào giỏ hàng');
@@ -166,7 +167,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
       setIsSelectionModalVisible(false);
       router.push({
         pathname: '/placeorder',
-        params: { productId, quantity: selectedQuantity }
+        params: { productId, quantity: selectedQuantity, variantId: selectedVariantId }
       });
     }
   };
@@ -247,6 +248,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
         product={product}
         selectedQuantity={selectedQuantity}
         setSelectedQuantity={setSelectedQuantity}
+        selectedVariantId={selectedVariantId}
+        onSelectVariant={setSelectedVariantId}
         mode={modalMode}
         onConfirm={handleConfirmSelection}
         loading={addingToCart}

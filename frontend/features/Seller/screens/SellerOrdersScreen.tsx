@@ -61,7 +61,7 @@ const SellerOrdersScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <SellerOrdersHeader onBackPress={() => router.back()} />
+      <SellerOrdersHeader />
 
       {loading && !refreshing ? (
         <SellerOrdersStateView loading error={null} onRetry={() => fetchOrders()} />

@@ -33,7 +33,7 @@ export default function PaymentProductSection({ insuranceSelected, setInsuranceS
           {item.mainImageUrl ? (
             <Image source={{ uri: item.mainImageUrl }} style={styles.productImage} />
           ) : (
-            <Image source={require('../../assets/images/Group 34010.png')} style={styles.productImage} />
+            <Image source={require('../../assets/images/product/product-1.png')} style={styles.productImage} />
           )}
           <View style={styles.productDetails}>
             <Text style={styles.productName} numberOfLines={2}>{item.productName}</Text>

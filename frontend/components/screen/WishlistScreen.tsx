@@ -62,7 +62,7 @@ const WishlistScreen = () => {
     discount: fav.product.discount > 0 ? `${fav.product.discount}% Off` : undefined,
     rating: fav.product.rating,
     reviews: fav.product.soldQuantity ? `${fav.product.soldQuantity} đã bán` : '0 đã bán', // Or '0 Đánh giá'
-    image: fav.product.image ? { uri: fav.product.image } : require('../../assets/images/Group 34010.png'),
+    image: fav.product.image ? { uri: fav.product.image } : require('../../assets/images/product/product-1.png'),
   });
 
   const renderEmptyState = () => (
