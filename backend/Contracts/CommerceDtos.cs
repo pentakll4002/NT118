@@ -450,3 +450,25 @@ public record SellerDashboardStats(
     IReadOnlyList<decimal> RevenueHistory,
     SellerTodoStats Todo,
     int TotalOrders);
+
+// ── Return Request DTOs ─────────────────────────────────────────────
+
+public class CreateReturnRequestDto
+{
+    [Required, MaxLength(100)]
+    public string Reason { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Description { get; set; }
+
+    public List<string>? EvidenceUrls { get; set; }
+}
+
+public class ProcessReturnRequestDto
+{
+    [Required]
+    public ReturnRequestStatus Status { get; set; }
+
+    [MaxLength(1000)]
+    public string? SellerNote { get; set; }
+}

@@ -364,6 +364,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 Status = x.Status.ToString(),
                 x.OrderedAt,
                 x.UpdatedAt,
+                HasReturnRequest = db.ReturnRequests.Any(r => r.OrderId == x.Id)
             })
             .ToListAsync(cancellationToken);
 
@@ -613,5 +614,176 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
 
         return Ok(new { message = "Xóa sản phẩm thành công." });
     }
-}
 
+    // ── Return Request Endpoints ────────────────────────────────────
+
+    /// <summary>
+    /// GET /api/seller/returns — List all return requests for seller's shop
+    /// </summary>
+    [HttpGet("returns")]
+    public async Task<ActionResult<IReadOnlyList<object>>> GetReturnRequests(CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var shop = await db.Shops.AsNoTracking().FirstOrDefaultAsync(x => x.OwnerId == userId, cancellationToken);
+        if (shop is null)
+            return BadRequest(new { message = "Bạn chưa có shop." });
+
+        var returns = await db.ReturnRequests
+            .AsNoTracking()
+            .Where(r => db.Orders.Any(o => o.Id == r.OrderId && o.ShopId == shop.Id))
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new
+            {
+                r.Id,
+                r.OrderId,
+                OrderNumber = db.Orders.Where(o => o.Id == r.OrderId).Select(o => o.OrderNumber).FirstOrDefault(),
+                r.BuyerId,
+                BuyerName = db.Users.Where(u => u.Id == r.BuyerId).Select(u => u.Username).FirstOrDefault(),
+                r.Reason,
+                r.RefundAmount,
+                Status = r.Status.ToString(),
+                r.CreatedAt,
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(returns);
+    }
+
+    /// <summary>
+    /// GET /api/seller/returns/{id} — Get return request detail
+    /// </summary>
+    [HttpGet("returns/{id:long}")]
+    public async Task<IActionResult> GetReturnRequestDetail(long id, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var shop = await db.Shops.AsNoTracking().FirstOrDefaultAsync(x => x.OwnerId == userId, cancellationToken);
+        if (shop is null)
+            return BadRequest(new { message = "Bạn chưa có shop." });
+
+        var returnRequest = await db.ReturnRequests
+            .AsNoTracking()
+            .Where(r => r.Id == id && db.Orders.Any(o => o.Id == r.OrderId && o.ShopId == shop.Id))
+            .Select(r => new
+            {
+                r.Id,
+                r.OrderId,
+                OrderNumber = db.Orders.Where(o => o.Id == r.OrderId).Select(o => o.OrderNumber).FirstOrDefault(),
+                r.BuyerId,
+                BuyerName = db.Users.Where(u => u.Id == r.BuyerId).Select(u => u.Username).FirstOrDefault(),
+                BuyerEmail = db.Users.Where(u => u.Id == r.BuyerId).Select(u => u.Email).FirstOrDefault(),
+                r.Reason,
+                r.Description,
+                r.EvidenceUrls,
+                Status = r.Status.ToString(),
+                r.SellerNote,
+                r.RefundAmount,
+                r.CreatedAt,
+                r.UpdatedAt,
+                OrderItems = db.OrderItems.Where(oi => oi.OrderId == r.OrderId).Select(oi => new
+                {
+                    oi.Id,
+                    oi.ProductName,
+                    oi.ProductImage,
+                    oi.Quantity,
+                    oi.UnitPrice,
+                    oi.TotalPrice,
+                }).ToList(),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (returnRequest is null)
+            return NotFound(new { message = "Không tìm thấy yêu cầu trả hàng." });
+
+        return Ok(returnRequest);
+    }
+
+    /// <summary>
+    /// PATCH /api/seller/returns/{id} — Seller approves or rejects return request
+    /// </summary>
+    [HttpPatch("returns/{id:long}")]
+    public async Task<IActionResult> ProcessReturnRequest(long id, [FromBody] ProcessReturnRequestDto body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var shop = await db.Shops.AsNoTracking().FirstOrDefaultAsync(x => x.OwnerId == userId, cancellationToken);
+        if (shop is null)
+            return BadRequest(new { message = "Bạn chưa có shop." });
+
+        var returnRequest = await db.ReturnRequests
+            .FirstOrDefaultAsync(r => r.Id == id && db.Orders.Any(o => o.Id == r.OrderId && o.ShopId == shop.Id), cancellationToken);
+
+        if (returnRequest is null)
+            return NotFound(new { message = "Không tìm thấy yêu cầu trả hàng." });
+
+        if (returnRequest.Status != ReturnRequestStatus.pending)
+            return BadRequest(new { message = "Yêu cầu này đã được xử lý." });
+
+        if (body.Status != ReturnRequestStatus.approved && body.Status != ReturnRequestStatus.rejected)
+            return BadRequest(new { message = "Trạng thái không hợp lệ. Chỉ chấp nhận 'approved' hoặc 'rejected'." });
+
+        var now = DateTime.UtcNow;
+        returnRequest.Status = body.Status;
+        returnRequest.SellerNote = body.SellerNote;
+        returnRequest.UpdatedAt = now;
+
+        string notificationTitle;
+        string notificationMessage;
+
+        if (body.Status == ReturnRequestStatus.approved)
+        {
+            // Update order status to refunded
+            var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == returnRequest.OrderId, cancellationToken);
+            if (order != null)
+            {
+                order.Status = OrderStatus.refunded;
+                order.PaymentStatus = PaymentStatus.refunded;
+                order.UpdatedAt = now;
+            }
+
+            notificationTitle = "Yêu cầu trả hàng được chấp nhận";
+            notificationMessage = $"Đơn hàng {order?.OrderNumber}: Người bán đã đồng ý hoàn trả. Vui lòng liên hệ người bán qua chat để thỏa thuận phương thức hoàn tiền.";
+        }
+        else
+        {
+            notificationTitle = "Yêu cầu trả hàng bị từ chối";
+            var orderNumber = await db.Orders.Where(o => o.Id == returnRequest.OrderId).Select(o => o.OrderNumber).FirstOrDefaultAsync(cancellationToken);
+            notificationMessage = $"Đơn hàng {orderNumber}: Người bán đã từ chối yêu cầu trả hàng.";
+            if (!string.IsNullOrWhiteSpace(body.SellerNote))
+                notificationMessage += $" Lý do: {body.SellerNote}";
+        }
+
+        // Send notification to buyer
+        var notification = new Notification
+        {
+            UserId = returnRequest.BuyerId,
+            Type = "return_update",
+            Title = notificationTitle,
+            MessageText = notificationMessage,
+            Data = $"{{\"orderId\": {returnRequest.OrderId}, \"returnRequestId\": {returnRequest.Id}, \"status\": \"{body.Status}\"}}",
+            IsRead = false,
+            CreatedAt = now,
+        };
+        db.Notifications.Add(notification);
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        await notificationService.NotifyUserAsync(returnRequest.BuyerId, new
+        {
+            notification.Id,
+            notification.Type,
+            notification.Title,
+            message = notification.MessageText,
+            notification.Data,
+            notification.IsRead,
+            notification.CreatedAt,
+        }, cancellationToken);
+
+        var statusLabel = body.Status == ReturnRequestStatus.approved ? "chấp nhận" : "từ chối";
+        return Ok(new { message = $"Đã {statusLabel} yêu cầu trả hàng." });
+    }
+}

@@ -12,6 +12,7 @@ const TABS: { label: string; status: OrderStatus | 'all' }[] = [
   { label: 'Chờ giao hàng', status: 'shipping' },
   { label: 'Hoàn thành', status: 'delivered' },
   { label: 'Đã hủy', status: 'cancelled' },
+  { label: 'Trả hàng/Hoàn tiền', status: 'refunded' },
 ];
 
 const OrderListPage = () => {
@@ -50,7 +51,9 @@ const OrderListPage = () => {
 
   const filteredOrders = activeTab === 'all' 
     ? orders 
-    : orders.filter(o => o.status === activeTab);
+    : activeTab === 'refunded'
+      ? orders.filter(o => o.status === 'refunded' || o.hasReturnRequest)
+      : orders.filter(o => o.status === activeTab && !o.hasReturnRequest);
 
   const getStatusLabel = (status: OrderStatus) => {
     switch (status) {

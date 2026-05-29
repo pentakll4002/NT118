@@ -17,6 +17,7 @@ export interface OrderDetail {
   status: string;
   notes: string | null;
   orderedAt: string;
+  hasReturnRequest?: boolean;
 }
 
 export interface OrderItem {

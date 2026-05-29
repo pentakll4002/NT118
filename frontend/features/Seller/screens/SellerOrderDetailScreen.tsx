@@ -235,6 +235,17 @@ const SellerOrderDetailScreen: React.FC = () => {
             </View>
           )}
 
+          {order.status === 'refunded' && (
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: '#f59e0b' }]}
+                onPress={() => router.push(`/seller/returns?filter=returns` as any)}
+              >
+                <Text style={styles.actionButtonText}>Xem ở mục Hoàn Trả</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={{ height: 30 }} />
         </ScrollView>
       ) : null}

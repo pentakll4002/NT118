@@ -29,6 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<WishlistCollection> WishlistCollections => Set<WishlistCollection>();
     public DbSet<WishlistCollectionItem> WishlistCollectionItems => Set<WishlistCollectionItem>();
+    public DbSet<ReturnRequest> ReturnRequests => Set<ReturnRequest>();
     public DbSet<Address> Addresses => Set<Address>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -413,6 +414,34 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.PaymentData).HasColumnName("payment_data").HasColumnType("jsonb");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
             e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<ReturnRequest>(e =>
+        {
+            e.ToTable("return_requests");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.OrderId).HasColumnName("order_id").IsRequired();
+            e.Property(x => x.BuyerId).HasColumnName("buyer_id").IsRequired();
+            e.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(100).IsRequired();
+            e.Property(x => x.Description).HasColumnName("description").HasMaxLength(2000);
+            e.Property(x => x.EvidenceUrls).HasColumnName("evidence_urls").HasColumnType("jsonb");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.SellerNote).HasColumnName("seller_note").HasMaxLength(1000);
+            e.Property(x => x.RefundAmount).HasColumnName("refund_amount").HasPrecision(15, 2);
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            e.HasIndex(x => x.OrderId).IsUnique();
+
+            e.HasOne(x => x.Order)
+                .WithMany()
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Buyer)
+                .WithMany()
+                .HasForeignKey(x => x.BuyerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

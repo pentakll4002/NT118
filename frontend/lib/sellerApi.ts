@@ -46,6 +46,7 @@ export interface SellerOrder {
   status: string;
   orderedAt: string;
   updatedAt?: string;
+  hasReturnRequest?: boolean;
 }
 
 export interface SellerOrderDetail {

@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getOrderDetail, updateOrderStatus, OrderDetailResponse as OrderDetailDTO, OrderStatus } from '../../lib/orderApi';
 import { userApi } from '../../lib/userApi';
 import OrderStepper from '../common/OrderStepper';
+import { getReturnRequest, ReturnRequestDTO } from '../../lib/returnApi';
 
 const OrderDetailPage = () => {
   const router = useRouter();
@@ -15,6 +16,7 @@ const OrderDetailPage = () => {
   const [loading, setLoading] = React.useState(true);
   const [cancelling, setCancelling] = React.useState(false);
   const [updating, setUpdating] = React.useState(false);
+  const [returnRequest, setReturnRequest] = React.useState<ReturnRequestDTO | null>(null);
 
   const fetchDetail = async () => {
     try {
@@ -25,11 +27,18 @@ const OrderDetailPage = () => {
       ]);
       setData(detail);
       
-      if (detail.order.shippingAddressId) {
-        const addr = addresses.find(a => a.id === detail.order.shippingAddressId);
-        setAddress(addr);
-      }
-    } catch (error) {
+        if (detail.order.shippingAddressId) {
+          const addr = addresses.find(a => a.id === detail.order.shippingAddressId);
+          setAddress(addr);
+        }
+
+        try {
+          const returnReq = await getReturnRequest(Number(id));
+          setReturnRequest(returnReq);
+        } catch (e) {
+          // No return request exists
+        }
+      } catch (error) {
       console.error('Failed to fetch order detail:', error);
       Alert.alert('Lỗi', 'Không thể tải chi tiết đơn hàng.');
     } finally {
@@ -243,15 +252,33 @@ const OrderDetailPage = () => {
           )}
 
           {order.status === 'delivered' && (
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.primaryButton]} 
-              onPress={() => router.push({ pathname: '/write-review' as any, params: { orderId: order.id } })}
-            >
-              <Text style={styles.actionButtonText}>Đánh giá đơn hàng</Text>
-            </TouchableOpacity>
+            <View style={{ gap: 12 }}>
+              {!returnRequest ? (
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.secondaryButton]} 
+                  onPress={() => router.push(`/return-request?orderId=${order.id}` as any)}
+                >
+                  <Text style={[styles.actionButtonText, { color: '#F73658' }]}>Trả hàng / Hoàn tiền</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.secondaryButton]} 
+                  onPress={() => router.push(`/return-status?orderId=${order.id}` as any)}
+                >
+                  <Text style={[styles.actionButtonText, { color: '#F59E0B' }]}>Xem trạng thái Trả hàng</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.primaryButton]} 
+                onPress={() => router.push({ pathname: '/write-review' as any, params: { orderId: order.id } })}
+              >
+                <Text style={styles.actionButtonText}>Đánh giá đơn hàng</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
-          {(order.status === 'cancelled' || order.status === 'delivered') && (
+          {(order.status === 'cancelled' || order.status === 'delivered' || order.status === 'refunded') && (
             <TouchableOpacity 
               style={[styles.actionButton, styles.secondaryButton]} 
               onPress={() => router.push(`/shop/${order.shopId}` as any)}

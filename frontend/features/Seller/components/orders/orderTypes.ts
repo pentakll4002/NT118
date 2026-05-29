@@ -12,4 +12,5 @@ export const ORDER_TABS: OrderTabOption[] = [
   { key: 'shipping', label: 'Đang giao' },
   { key: 'completed', label: 'Hoàn tất' },
   { key: 'cancelled', label: 'Đã huỷ' },
+  { key: 'returns', label: 'Hoàn trả' },
 ];

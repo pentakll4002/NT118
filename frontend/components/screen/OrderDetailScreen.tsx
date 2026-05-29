@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getOrderDetail, OrderDetailResponse, formatOrderStatus, formatPaymentStatus, formatPaymentMethod, formatPriceFull } from '../../lib/orderApi';
+import { getReturnRequest, ReturnRequestDTO } from '../../lib/returnApi';
 
 const SC: Record<string,string> = { pending:'#F59E0B', confirmed:'#3B82F6', shipping:'#F97316', delivered:'#10B981', cancelled:'#EF4444' };
 const PC: Record<string,string> = { pending:'#F59E0B', paid:'#10B981', failed:'#EF4444' };
@@ -13,9 +14,22 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
   const [data, setData] = useState<OrderDetailResponse|null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string|null>(null);
+  const [returnReq, setReturnReq] = useState<ReturnRequestDTO|null>(null);
 
   useEffect(() => {
-    (async () => { try { setLoading(true); setData(await getOrderDetail(orderId)); } catch(e:any) { setErr(e.message); } finally { setLoading(false); } })();
+    (async () => { 
+      try { 
+        setLoading(true); 
+        setData(await getOrderDetail(orderId));
+        try {
+          setReturnReq(await getReturnRequest(orderId));
+        } catch(e) {} // ignore if no return request
+      } catch(e:any) { 
+        setErr(e.message); 
+      } finally { 
+        setLoading(false); 
+      } 
+    })();
   }, [orderId]);
 
   if (loading) return <SafeAreaView style={s.container}><View style={s.header}><TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color="#1E293B" /></TouchableOpacity><Text style={s.headerTitle}>Chi tiết đơn hàng</Text><View style={{width:32}}/></View><View style={s.center}><ActivityIndicator size="large" color="#FF4747"/></View></SafeAreaView>;
@@ -86,6 +100,27 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
           </View>
         </View>
         {order.notes && <View style={s.card}><Text style={s.cardTitle}>Ghi chú</Text><Text style={{fontSize:14,color:'#475569'}}>{order.notes}</Text></View>}
+        
+        {/* Actions */}
+        {order.status.toLowerCase() === 'delivered' && (
+          <View style={s.actionsContainer}>
+            {!returnReq ? (
+              <TouchableOpacity 
+                style={[s.actionButton, s.secondaryButton]} 
+                onPress={() => router.push(`/return-request?orderId=${order.id}` as any)}
+              >
+                <Text style={[s.actionButtonText, { color: '#FF4747' }]}>Trả hàng / Hoàn tiền</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={[s.actionButton, s.secondaryButton]} 
+                onPress={() => router.push(`/return-status?orderId=${order.id}` as any)}
+              >
+                <Text style={[s.actionButtonText, { color: '#F59E0B' }]}>Xem trạng thái Trả hàng</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,5 +148,24 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#FF4747',
     fontWeight: '600',
+  },
+  actionsContainer: {
+    padding: 16,
+    marginTop: 8,
+  },
+  actionButton: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    backgroundColor: '#FFF',
+  },
+  secondaryButton: {
+    borderColor: '#E2E8F0',
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

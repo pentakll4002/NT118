@@ -34,17 +34,17 @@ export const normalizeQueryFilter = (value: unknown): OrderTab => {
 export const isOrderMatchedByTab = (order: SellerOrder, tab: OrderTab) => {
   switch (tab) {
     case 'unpaid':
-      return order.status === 'pending';
+      return order.status === 'pending' && !order.hasReturnRequest;
     case 'to-ship':
-      return order.status === 'confirmed';
+      return order.status === 'confirmed' && !order.hasReturnRequest;
     case 'shipping':
-      return order.status === 'shipping';
+      return order.status === 'shipping' && !order.hasReturnRequest;
     case 'completed':
-      return order.status === 'delivered';
+      return order.status === 'delivered' && !order.hasReturnRequest;
     case 'cancelled':
-      return order.status === 'cancelled';
+      return order.status === 'cancelled' && !order.hasReturnRequest;
     case 'returns':
-      return order.status === 'refunded';
+      return order.status === 'refunded' || order.hasReturnRequest;
     case 'all':
     default:
       return true;
@@ -87,8 +87,8 @@ export const resolvePaymentStatusLabel = (paymentStatus: string) => {
 
 export const computeQuickStats = (orders: SellerOrder[]) => ({
   total: orders.length,
-  toShip: orders.filter((order) => order.status === 'confirmed').length,
-  shipping: orders.filter((order) => order.status === 'shipping').length,
-  completed: orders.filter((order) => order.status === 'delivered').length,
-  returns: orders.filter((order) => order.status === 'refunded').length,
+  toShip: orders.filter((order) => order.status === 'confirmed' && !order.hasReturnRequest).length,
+  shipping: orders.filter((order) => order.status === 'shipping' && !order.hasReturnRequest).length,
+  completed: orders.filter((order) => order.status === 'delivered' && !order.hasReturnRequest).length,
+  returns: orders.filter((order) => order.status === 'refunded' || order.hasReturnRequest).length,
 });

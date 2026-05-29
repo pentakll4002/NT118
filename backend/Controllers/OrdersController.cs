@@ -35,6 +35,7 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
                 x.PaymentStatus,
                 x.Status,
                 x.OrderedAt,
+                HasReturnRequest = db.ReturnRequests.Any(r => r.OrderId == x.Id)
             })
             .ToListAsync(cancellationToken);
 
@@ -316,6 +317,121 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
         await db.SaveChangesAsync(cancellationToken);
 
         return Ok(new { message = "Cập nhật trạng thái đơn hàng thành công." });
+    }
+
+    /// <summary>
+    /// POST /api/orders/{id}/return — Buyer creates a return/refund request
+    /// </summary>
+    [HttpPost("{id:long}/return")]
+    public async Task<IActionResult> CreateReturnRequest(long id, [FromBody] CreateReturnRequestDto body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var order = await db.Orders.FirstOrDefaultAsync(x => x.Id == id && x.BuyerId == userId, cancellationToken);
+        if (order is null)
+            return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+        if (order.Status != OrderStatus.delivered)
+            return BadRequest(new { message = "Chỉ có thể yêu cầu trả hàng khi đơn hàng đã được giao." });
+
+        // Check 7-day return window
+        var daysSinceDelivered = (DateTime.UtcNow - order.UpdatedAt).TotalDays;
+        if (daysSinceDelivered > 7)
+            return BadRequest(new { message = "Đã quá thời hạn 7 ngày để yêu cầu trả hàng." });
+
+        // Check if return request already exists
+        var existingRequest = await db.ReturnRequests.AnyAsync(x => x.OrderId == id, cancellationToken);
+        if (existingRequest)
+            return Conflict(new { message = "Đơn hàng này đã có yêu cầu trả hàng." });
+
+        var now = DateTime.UtcNow;
+        var returnRequest = new ReturnRequest
+        {
+            OrderId = id,
+            BuyerId = userId,
+            Reason = body.Reason,
+            Description = body.Description,
+            EvidenceUrls = body.EvidenceUrls != null ? System.Text.Json.JsonSerializer.Serialize(body.EvidenceUrls) : null,
+            Status = ReturnRequestStatus.pending,
+            RefundAmount = order.TotalAmount,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.ReturnRequests.Add(returnRequest);
+
+        // Notify the seller
+        var shop = await db.Shops.AsNoTracking().FirstOrDefaultAsync(x => x.Id == order.ShopId, cancellationToken);
+        if (shop != null)
+        {
+            var notification = new Notification
+            {
+                UserId = shop.OwnerId,
+                Type = "return_request",
+                Title = "Yêu cầu trả hàng mới",
+                MessageText = $"Đơn hàng {order.OrderNumber} có yêu cầu trả hàng. Lý do: {body.Reason}",
+                Data = $"{{\"orderId\": {order.Id}, \"returnRequestId\": {returnRequest.Id}}}",
+                IsRead = false,
+                CreatedAt = now,
+            };
+            db.Notifications.Add(notification);
+            await db.SaveChangesAsync(cancellationToken);
+
+            await notificationService.NotifyUserAsync(shop.OwnerId, new
+            {
+                notification.Id,
+                notification.Type,
+                notification.Title,
+                message = notification.MessageText,
+                notification.Data,
+                notification.IsRead,
+                notification.CreatedAt,
+            }, cancellationToken);
+        }
+        else
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new { message = "Gửi yêu cầu trả hàng thành công.", returnRequest.Id });
+    }
+
+    /// <summary>
+    /// GET /api/orders/{id}/return — Buyer checks return request status
+    /// </summary>
+    [HttpGet("{id:long}/return")]
+    public async Task<IActionResult> GetReturnRequest(long id, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var order = await db.Orders.AsNoTracking().AnyAsync(x => x.Id == id && x.BuyerId == userId, cancellationToken);
+        if (!order)
+            return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+        var returnRequest = await db.ReturnRequests
+            .AsNoTracking()
+            .Where(x => x.OrderId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.OrderId,
+                x.Reason,
+                x.Description,
+                x.EvidenceUrls,
+                Status = x.Status.ToString(),
+                x.SellerNote,
+                x.RefundAmount,
+                x.CreatedAt,
+                x.UpdatedAt,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (returnRequest is null)
+            return NotFound(new { message = "Chưa có yêu cầu trả hàng cho đơn này." });
+
+        return Ok(returnRequest);
     }
 
     private async Task<(decimal ShippingFee, double? DistanceKm, bool IsFallback)> EstimateShippingFeeInternalAsync(
