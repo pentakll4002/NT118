@@ -48,7 +48,7 @@
 ## CÔNG NGHỆ SỬ DỤNG
 
 -    **Backend:** [ASP.NET](https://dotnet.microsoft.com/en-us/apps/aspnet)
--    **AI Service:** [FastAPI](https://fastapi.tiangolo.com/), [Python](https://www.python.org/), [LangChain](https://www.langchain.com/) - AI Search (semantic) + AI Chatbot (RAG)
+-    **AI Service:** [FastAPI](https://fastapi.tiangolo.com/), [Python](https://www.python.org/), [LangChain](https://www.langchain.com/), [HuggingFace](https://huggingface.co/) (Optional) - AI Search (semantic) + AI Chatbot (RAG)
 -    **Frontend:** [React Native](https://reactnative.dev/), [TailwindCSS](https://tailwindcss.com/), [Figma](https://www.figma.com/community)
 -    **Database:** [PostgreSQL](https://www.postgresql.org/)
 -    **Realtime:** [SignalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr)
