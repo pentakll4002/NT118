@@ -46,9 +46,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onHide, onDe
 
   return (
     <View style={styles.container}>
-      {/* ——— Product image ——— */}
       <Image 
-        source={product.image ? { uri: product.image } : require('../../../../assets/images/product/product-1.png')} 
+        source={product.image && product.image.trim() !== '' ? { uri: product.image } : require('../../../../assets/images/product/product-1.png')} 
         style={styles.image} 
         contentFit="cover"
       />

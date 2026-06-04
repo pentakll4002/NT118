@@ -3,16 +3,32 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface PaymentMethodSectionProps {
-  selectedMethod: 'cod' | 'vietqr';
-  onSelectMethod: (method: 'cod' | 'vietqr') => void;
+  selectedMethod: 'cod' | 'vietqr' | 'wallet';
+  onSelectMethod: (method: 'cod' | 'vietqr' | 'wallet') => void;
+  walletBalance?: number | null;
 }
 
-export default function PaymentMethodSection({ selectedMethod, onSelectMethod }: PaymentMethodSectionProps) {
+export default function PaymentMethodSection({ selectedMethod, onSelectMethod, walletBalance }: PaymentMethodSectionProps) {
   return (
     <View style={styles.sectionBlock}>
       <View style={styles.rowItemPayment}>
         <Text style={styles.paymentTitleTitle}>Phương thức thanh toán</Text>
       </View>
+
+      <TouchableOpacity style={styles.paymentMethodRow} onPress={() => onSelectMethod('wallet')}>
+        <View style={styles.paymentMethodLeft}>
+          <Ionicons name="wallet-sharp" size={24} color={selectedMethod === 'wallet' ? "#F83758" : "#888"} />
+          <Text style={styles.paymentMethodName}>
+            {"  Ví ShopeePay"}
+            {walletBalance !== undefined && walletBalance !== null ? ` (Số dư: ${walletBalance.toLocaleString('vi-VN')}đ)` : ''}
+          </Text>
+        </View>
+        <MaterialCommunityIcons 
+          name={selectedMethod === 'wallet' ? "check-circle" : "checkbox-blank-circle-outline"} 
+          size={24} 
+          color={selectedMethod === 'wallet' ? "#F83758" : "#888"} 
+        />
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.paymentMethodRow} onPress={() => onSelectMethod('cod')}>
         <View style={styles.paymentMethodLeft}>

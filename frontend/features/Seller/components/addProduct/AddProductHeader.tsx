@@ -5,19 +5,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AddProductHeaderProps {
   onBackPress: () => void;
+  title?: string;
+  onPostPress?: () => void;
 }
 
-const AddProductHeader: React.FC<AddProductHeaderProps> = ({ onBackPress }) => {
+const AddProductHeader: React.FC<AddProductHeaderProps> = ({ 
+  onBackPress, 
+  title = 'Đăng sản phẩm mới', 
+  onPostPress 
+}) => {
   const insets = useSafeAreaInsets();
+  const isEdit = title.toUpperCase().includes('SỬA') || title.toUpperCase().includes('CẬP');
 
   return (
     <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
       <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
         <Ionicons name="chevron-back" size={22} color="#2c3e50" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Đăng sản phẩm mới</Text>
-      <TouchableOpacity style={styles.postTextButton} activeOpacity={0.7}>
-        <Text style={styles.postText}>ĐĂNG</Text>
+      <Text style={styles.headerTitle}>{title}</Text>
+      <TouchableOpacity style={styles.postTextButton} activeOpacity={0.7} onPress={onPostPress}>
+        <Text style={styles.postText}>{isEdit ? 'LƯU' : 'ĐĂNG'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -60,3 +67,4 @@ const styles = StyleSheet.create({
 });
 
 export default AddProductHeader;
+

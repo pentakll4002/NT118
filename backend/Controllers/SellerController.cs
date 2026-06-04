@@ -137,9 +137,14 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        var products = await db.Products
-            .AsNoTracking()
-            .Where(x => x.Status != ProductStatus.deleted && db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
+        var isAdmin = this.IsAdmin();
+        var query = db.Products.AsNoTracking().Where(x => x.Status != ProductStatus.deleted);
+        if (!isAdmin)
+        {
+            query = query.Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId));
+        }
+
+        var products = await query
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new
             {
@@ -344,15 +349,68 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         return Ok(new { message = "Thêm sản phẩm thành công.", product.Id });
     }
 
+    [HttpPut("products/{id:long}")]
+    public async Task<IActionResult> UpdateSellerProduct(long id, [FromBody] CreateSellerProductRequest body, CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var product = await db.Products.Include(p => p.Images).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (product is null)
+            return NotFound(new { message = "Không tìm thấy sản phẩm." });
+
+        var isAdmin = this.IsAdmin();
+        var isSellerOfProduct = await db.Shops.AnyAsync(
+            x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
+
+        if (!isSellerOfProduct && !isAdmin)
+            return Forbid();
+
+        var slugExists = await db.Products.AnyAsync(x => x.Slug == body.Slug && x.Id != id, cancellationToken);
+        if (slugExists)
+            return Conflict(new { message = "Slug sản phẩm đã tồn tại." });
+
+        var now = DateTime.UtcNow;
+        product.CategoryId = body.CategoryId;
+        product.Name = body.Name;
+        product.Slug = body.Slug;
+        product.Description = body.Description;
+        product.Price = body.Price;
+        product.OriginalPrice = body.OriginalPrice;
+        product.StockQuantity = body.StockQuantity;
+        product.WeightGrams = body.WeightGrams;
+        product.UpdatedAt = now;
+
+        if (body.ImageUrls != null)
+        {
+            db.ProductImages.RemoveRange(product.Images);
+            product.Images = body.ImageUrls.Select((url, index) => new ProductImage
+            {
+                ImageUrl = url,
+                IsMain = index == 0,
+                SortOrder = index,
+                CreatedAt = now
+            }).ToList();
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(new { message = "Cập nhật sản phẩm thành công." });
+    }
+
     [HttpGet("orders")]
     public async Task<ActionResult<IReadOnlyList<object>>> GetSellerOrders(CancellationToken cancellationToken)
     {
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        var orders = await db.Orders
-            .AsNoTracking()
-            .Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
+        var isAdmin = this.IsAdmin();
+        var query = db.Orders.AsNoTracking();
+        if (!isAdmin)
+        {
+            query = query.Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId));
+        }
+
+        var orders = await query
             .OrderByDescending(x => x.OrderedAt)
             .Select(x => new
             {
@@ -380,9 +438,14 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (!this.TryGetCurrentUserId(out var userId))
             return Unauthorized();
 
-        var order = await db.Orders
-            .AsNoTracking()
-            .Where(x => x.Id == id && db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId))
+        var isAdmin = this.IsAdmin();
+        var query = db.Orders.AsNoTracking().Where(x => x.Id == id);
+        if (!isAdmin)
+        {
+            query = query.Where(x => db.Shops.Any(s => s.Id == x.ShopId && s.OwnerId == userId));
+        }
+
+        var order = await query
             .Select(x => new
             {
                 x.Id,
@@ -463,9 +526,10 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (order is null)
             return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
+        var isAdmin = this.IsAdmin();
         var isSellerOfOrder = await db.Shops.AnyAsync(
             x => x.Id == order.ShopId && x.OwnerId == userId, cancellationToken);
-        if (!isSellerOfOrder)
+        if (!isSellerOfOrder && !isAdmin)
             return Forbid();
 
         // Validate status transition
@@ -561,9 +625,10 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (product is null)
             return NotFound(new { message = "Không tìm thấy sản phẩm." });
 
+        var isAdmin = this.IsAdmin();
         var isSellerOfProduct = await db.Shops.AnyAsync(
             x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
-        if (!isSellerOfProduct)
+        if (!isSellerOfProduct && !isAdmin)
             return Forbid();
 
         product.Status = body.Status;
@@ -583,9 +648,10 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (product is null)
             return NotFound(new { message = "Không tìm thấy sản phẩm." });
 
+        var isAdmin = this.IsAdmin();
         var isSellerOfProduct = await db.Shops.AnyAsync(
             x => x.Id == product.ShopId && x.OwnerId == userId, cancellationToken);
-        if (!isSellerOfProduct)
+        if (!isSellerOfProduct && !isAdmin)
             return Forbid();
 
         product.Status = ProductStatus.deleted;

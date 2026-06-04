@@ -272,25 +272,39 @@ def transform_rows(csv_path: str) -> List[ProductRow]:
 
 def ensure_seller_and_shop(cur) -> int:
     cur.execute(
-        """
-        INSERT INTO users (username, email, password_hash, role, status)
-        VALUES (%s, %s, %s, 'seller', 'active')
-        ON CONFLICT (email)
-        DO UPDATE SET username = EXCLUDED.username
-        RETURNING id;
-        """,
-        (
-            "gearvn_store",
-            "gearvn.seller@nt118.local",
-            "$2a$12$placeholder.hash.for.seeding.only",
-        ),
+        "SELECT id FROM users WHERE email = %s OR username = %s;",
+        ("gearvn.seller@nt118.local", "gearvn_store")
     )
-    seller_id = cur.fetchone()[0]
+    row = cur.fetchone()
+    if row:
+        seller_id = row[0]
+        cur.execute(
+            """
+            UPDATE users 
+            SET username = %s, email = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s;
+            """,
+            ("gearvn_store", "gearvn.seller@nt118.local", seller_id)
+        )
+    else:
+        cur.execute(
+            """
+            INSERT INTO users (username, email, password_hash, created_at, updated_at)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id;
+            """,
+            (
+                "gearvn_store",
+                "gearvn.seller@nt118.local",
+                "$2a$12$placeholder.hash.for.seeding.only",
+            ),
+        )
+        seller_id = cur.fetchone()[0]
 
     cur.execute(
         """
-        INSERT INTO shops (owner_id, name, slug, description, status, is_verified)
-        VALUES (%s, %s, %s, %s, 'active', true)
+        INSERT INTO shops (owner_id, name, slug, description, type, status, is_verified, created_at, updated_at, rating, total_reviews, total_products)
+        VALUES (%s, %s, %s, %s, 'individual', 'active', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0.0, 0, 0)
         ON CONFLICT (slug)
         DO UPDATE SET owner_id = EXCLUDED.owner_id, name = EXCLUDED.name
         RETURNING id;
@@ -307,6 +321,7 @@ def ensure_seller_and_shop(cur) -> int:
 
 
 def ensure_categories(cur, category_slugs: Sequence[str]) -> Dict[str, int]:
+    now = datetime.utcnow()
     category_rows = [
         (
             CATEGORY_DISPLAY_NAMES.get(slug, slug.replace("-", " ").title()),
@@ -314,6 +329,8 @@ def ensure_categories(cur, category_slugs: Sequence[str]) -> Dict[str, int]:
             None,
             0,
             "active",
+            now,
+            now,
         )
         for slug in sorted(set(category_slugs))
     ]
@@ -321,10 +338,10 @@ def ensure_categories(cur, category_slugs: Sequence[str]) -> Dict[str, int]:
     execute_values(
         cur,
         """
-        INSERT INTO categories (name, slug, description, sort_order, status)
+        INSERT INTO categories (name, slug, description, sort_order, status, created_at, updated_at)
         VALUES %s
         ON CONFLICT (slug)
-        DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status;
+        DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status, updated_at = EXCLUDED.updated_at;
         """,
         category_rows,
     )

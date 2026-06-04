@@ -176,7 +176,7 @@ using (var scope = app.Services.CreateScope())
 
         foreach (var acc in accounts)
         {
-            var seedUser = db.Users.FirstOrDefault(u => u.Email == acc.Email);
+            var seedUser = db.Users.FirstOrDefault(u => u.Email == acc.Email || u.Username == acc.Username);
             if (seedUser == null)
             {
                 seedUser = new User
@@ -200,6 +200,55 @@ using (var scope = app.Services.CreateScope())
                     UpdatedAt = seedNow,
                 });
                 db.SaveChanges();
+            }
+            else
+            {
+                bool changed = false;
+                if (seedUser.Email != acc.Email)
+                {
+                    if (!db.Users.Any(u => u.Email == acc.Email && u.Id != seedUser.Id))
+                    {
+                        seedUser.Email = acc.Email;
+                        changed = true;
+                    }
+                }
+                if (seedUser.Username != acc.Username)
+                {
+                    if (!db.Users.Any(u => u.Username == acc.Username && u.Id != seedUser.Id))
+                    {
+                        seedUser.Username = acc.Username;
+                        changed = true;
+                    }
+                }
+                if (seedUser.Role != acc.Role)
+                {
+                    seedUser.Role = acc.Role;
+                    changed = true;
+                }
+                if (changed)
+                {
+                    seedUser.UpdatedAt = seedNow;
+                    db.SaveChanges();
+                }
+
+                var profile = db.UserProfiles.FirstOrDefault(p => p.UserId == seedUser.Id);
+                if (profile == null)
+                {
+                    db.UserProfiles.Add(new UserProfile
+                    {
+                        UserId = seedUser.Id,
+                        FullName = acc.FullName,
+                        CreatedAt = seedNow,
+                        UpdatedAt = seedNow,
+                    });
+                    db.SaveChanges();
+                }
+                else if (profile.FullName != acc.FullName)
+                {
+                    profile.FullName = acc.FullName;
+                    profile.UpdatedAt = seedNow;
+                    db.SaveChanges();
+                }
             }
         }
     }
@@ -503,6 +552,28 @@ using (var scope = app.Services.CreateScope())
             UNIQUE(collection_id, product_id)
         );
         CREATE INDEX IF NOT EXISTS idx_wishlist_collection_items_collection ON wishlist_collection_items(collection_id);
+    ");
+
+    // Create wallet tables if they don't exist
+    db.Database.ExecuteSqlRaw(@"
+        CREATE TABLE IF NOT EXISTS wallets (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS wallet_transactions (
+            id BIGSERIAL PRIMARY KEY,
+            wallet_id BIGINT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+            amount DECIMAL(15,2) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            description VARCHAR(255),
+            order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet ON wallet_transactions(wallet_id);
     ");
 }
 
