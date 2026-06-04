@@ -31,6 +31,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WishlistCollectionItem> WishlistCollectionItems => Set<WishlistCollectionItem>();
     public DbSet<ReturnRequest> ReturnRequests => Set<ReturnRequest>();
     public DbSet<Address> Addresses => Set<Address>();
+    public DbSet<Wallet> Wallets => Set<Wallet>();
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -441,6 +443,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Buyer)
                 .WithMany()
                 .HasForeignKey(x => x.BuyerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Wallet>(e =>
+        {
+            e.ToTable("wallets");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            e.Property(x => x.Balance).HasColumnName("balance").HasPrecision(15, 2);
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            e.HasIndex(x => x.UserId).IsUnique();
+
+            e.HasOne(x => x.User)
+                .WithOne()
+                .HasForeignKey<Wallet>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WalletTransaction>(e =>
+        {
+            e.ToTable("wallet_transactions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.WalletId).HasColumnName("wallet_id").IsRequired();
+            e.Property(x => x.Amount).HasColumnName("amount").HasPrecision(15, 2);
+            e.Property(x => x.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+            e.Property(x => x.Description).HasColumnName("description").HasMaxLength(255);
+            e.Property(x => x.OrderId).HasColumnName("order_id");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+
+            e.HasOne(x => x.Wallet)
+                .WithMany(x => x.Transactions)
+                .HasForeignKey(x => x.WalletId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
