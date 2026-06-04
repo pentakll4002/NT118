@@ -15,6 +15,7 @@ import AddAddressPage from './AddAddressPage';
 import OrderSuccessPage from './OrderSuccessPage';
 import { apiClient } from '../../lib/apiClient';
 import { sendMessage } from '../../lib/messageApi';
+import { getWallet } from '../../lib/walletApi';
 import { ShippingMethod } from '../common/PaymentShippingSection';
 
 interface PaymentPageProps {
@@ -36,7 +37,8 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<UserAddressType | null>(null);
   const [cartItems, setCartItems] = useState<CheckoutCartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vietqr'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vietqr' | 'wallet'>('cod');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [paymentUrl, setPaymentUrl] = useState<string | undefined>(undefined);
   const [editingAddressId, setEditingAddressId] = useState<number | undefined>(undefined);
@@ -59,6 +61,15 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
       }
     } catch (error) {
       console.log("Failed to fetch address:", error);
+    }
+  };
+
+  const fetchWallet = async () => {
+    try {
+      const res = await getWallet();
+      setWalletBalance(res.balance);
+    } catch (e) {
+      console.log("Failed to fetch wallet in checkout:", e);
     }
   };
 
@@ -126,7 +137,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingData(true);
-      await Promise.all([fetchAddress(), fetchCart()]);
+      await Promise.all([fetchAddress(), fetchCart(), fetchWallet()]);
       setIsLoadingData(false);
     };
     loadData();
@@ -252,6 +263,14 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
 
       setIsProcessing(true);
 
+      if (paymentMethod === 'wallet') {
+        if (walletBalance === null || walletBalance < finalTotal) {
+          Alert.alert("Lỗi thanh toán", `Số dư ví không đủ để thanh toán. Số dư hiện tại: ${walletBalance?.toLocaleString('vi-VN') || 0}đ. Vui lòng nạp thêm tiền.`);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       const payload = {
         shippingAddressId: selectedAddress.id,
         paymentMethod: paymentMethod,
@@ -281,7 +300,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
         }
       }
 
-      if (paymentMethod === 'cod') {
+      if (paymentMethod === 'cod' || paymentMethod === 'wallet') {
         // order successful
         setActiveScreen('success');
       } else {
@@ -445,6 +464,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
           <PaymentMethodSection 
             selectedMethod={paymentMethod}
             onSelectMethod={setPaymentMethod}
+            walletBalance={walletBalance}
           />
 
           <PaymentSummarySection 

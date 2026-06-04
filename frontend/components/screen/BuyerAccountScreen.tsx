@@ -7,6 +7,7 @@ import { clearAuthToken } from '../../lib/authToken';
 
 import { userApi, UserProfileDTO } from '../../lib/userApi';
 import { getOrderStats, OrderStat } from '../../lib/orderApi';
+import { getWallet } from '../../lib/walletApi';
 
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -14,6 +15,7 @@ const BuyerAccountScreen: React.FC = () => {
   const router = useRouter();
   const [profile, setProfile] = React.useState<UserProfileDTO | null>(null);
   const [orderStats, setOrderStats] = React.useState<OrderStat[]>([]);
+  const [balance, setBalance] = React.useState<number | null>(null);
 
   const fetchData = async () => {
     try {
@@ -23,6 +25,10 @@ const BuyerAccountScreen: React.FC = () => {
       ]);
       setProfile(profileData);
       setOrderStats(statsData);
+      const wallet = await getWallet().catch(() => null);
+      if (wallet) {
+        setBalance(wallet.balance);
+      }
     } catch (error) {
       console.error('Failed to fetch account data:', error);
     }
@@ -87,6 +93,29 @@ const BuyerAccountScreen: React.FC = () => {
               <Text style={styles.memberText}>THÀNH VIÊN</Text>
             </View>
           </View>
+        </View>
+
+        {/* Wallet & Coins Bar */}
+        <View style={styles.walletBar}>
+          <TouchableOpacity style={styles.walletItem} activeOpacity={0.7} onPress={() => router.push('/wallet' as any)}>
+            <Ionicons name="wallet-outline" size={20} color="#F73658" />
+            <View style={styles.walletTextContainer}>
+              <Text style={styles.walletLabel}>Ví ShopeePay</Text>
+              <Text style={styles.walletValue}>
+                {balance !== null ? `${balance.toLocaleString('vi-VN')}đ` : 'Đang tải...'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.walletDivider} />
+          <TouchableOpacity style={styles.walletItem} activeOpacity={0.7} onPress={() => router.push('/wallet' as any)}>
+            <Ionicons name="gift-outline" size={20} color="#FFB000" />
+            <View style={styles.walletTextContainer}>
+              <Text style={styles.walletLabel}>Shopee Xu</Text>
+              <Text style={styles.walletValue}>
+                {balance !== null ? `${balance.toLocaleString('vi-VN')} xu` : 'Đang tải...'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -383,6 +412,48 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 9,
     fontWeight: '800',
+  },
+  walletBar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  walletItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  walletTextContainer: {
+    flexDirection: 'column',
+  },
+  walletLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  walletValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginTop: 2,
+  },
+  walletDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#e2e8f0',
   },
 });
 
