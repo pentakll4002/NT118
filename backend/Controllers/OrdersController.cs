@@ -204,6 +204,30 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
         }
 
         var now = DateTime.UtcNow;
+        var totalAmount = subtotal + shippingFee - discount;
+        Wallet? userWallet = null;
+        if (body.PaymentMethod == "wallet")
+        {
+            userWallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (userWallet == null)
+            {
+                userWallet = new Wallet
+                {
+                    UserId = userId,
+                    Balance = 0m,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.Wallets.Add(userWallet);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            if (userWallet.Balance < totalAmount)
+            {
+                return BadRequest(new { message = $"Số dư ví không đủ để thanh toán. Số dư hiện tại: {userWallet.Balance:N0}đ" });
+            }
+        }
+
         var order = new Order
         {
             OrderNumber = $"ORD-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
@@ -215,10 +239,10 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
             Subtotal = subtotal,
             ShippingFee = shippingFee,
             DiscountAmount = discount,
-            TotalAmount = subtotal + shippingFee - discount,
+            TotalAmount = totalAmount,
             PaymentMethod = body.PaymentMethod,
-            PaymentStatus = PaymentStatus.pending,
-            Status = OrderStatus.pending,
+            PaymentStatus = body.PaymentMethod == "wallet" ? PaymentStatus.paid : PaymentStatus.pending,
+            Status = body.PaymentMethod == "wallet" ? OrderStatus.confirmed : OrderStatus.pending,
             Notes = body.Notes,
             OrderedAt = now,
             UpdatedAt = now,
@@ -226,6 +250,36 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(cancellationToken);
+
+        if (body.PaymentMethod == "wallet" && userWallet != null)
+        {
+            userWallet.Balance -= totalAmount;
+            userWallet.UpdatedAt = DateTime.UtcNow;
+
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = userWallet.Id,
+                Amount = -totalAmount,
+                Type = "payment",
+                Description = $"Thanh toán đơn hàng {order.OrderNumber}",
+                OrderId = order.Id,
+                CreatedAt = DateTime.UtcNow
+            });
+            
+            var payment = new Payment
+            {
+                OrderId = order.Id,
+                PaymentMethod = "wallet",
+                TransactionId = $"WAL-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                Amount = totalAmount,
+                Currency = "VND",
+                Status = PaymentStatus.paid,
+                PaymentData = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(new { source = "wallet", createdBy = userId })),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            db.Payments.Add(payment);
+        }
 
         // Now order.Id is populated by the database
         foreach (var item in orderItems)
@@ -312,9 +366,91 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
         if (!isSellerOfOrder && !isBuyer && !this.IsAdmin())
             return Forbid();
 
+        var oldStatus = order.Status;
+        var oldPaymentStatus = order.PaymentStatus;
+
         order.Status = body.Status;
         order.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
+
+        if ((body.Status == OrderStatus.cancelled || body.Status == OrderStatus.refunded)
+            && oldPaymentStatus == PaymentStatus.paid
+            && order.PaymentStatus != PaymentStatus.refunded)
+        {
+            order.PaymentStatus = PaymentStatus.refunded;
+
+            var wallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == order.BuyerId, cancellationToken);
+            if (wallet == null)
+            {
+                wallet = new Wallet
+                {
+                    UserId = order.BuyerId,
+                    Balance = 0m,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.Wallets.Add(wallet);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            wallet.Balance += order.TotalAmount;
+            wallet.UpdatedAt = DateTime.UtcNow;
+
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Amount = order.TotalAmount,
+                Type = "refund",
+                Description = $"Hoàn tiền đơn hàng {order.OrderNumber} do hủy/trả hàng",
+                OrderId = order.Id,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            var refundPayment = new Payment
+            {
+                OrderId = order.Id,
+                PaymentMethod = order.PaymentMethod ?? "wallet",
+                TransactionId = $"REF-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                Amount = order.TotalAmount,
+                Currency = "VND",
+                Status = PaymentStatus.refunded,
+                PaymentData = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(new { 
+                    source = "auto_refund_to_wallet", 
+                    refundedAmount = order.TotalAmount,
+                    walletId = wallet.Id
+                })),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            db.Payments.Add(refundPayment);
+
+            var refundNotification = new Notification
+            {
+                UserId = order.BuyerId,
+                Type = "wallet_refund",
+                Title = "Hoàn tiền đơn hàng thành công",
+                MessageText = $"Đơn hàng {order.OrderNumber} đã được hủy/hoàn trả. Số tiền {order.TotalAmount:N0}đ đã được hoàn lại vào Ví ShopeePay của bạn.",
+                Data = $"{{\"orderId\": {order.Id}, \"refundAmount\": {order.TotalAmount}}}",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Notifications.Add(refundNotification);
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            await notificationService.NotifyUserAsync(order.BuyerId, new {
+                refundNotification.Id,
+                refundNotification.Type,
+                refundNotification.Title,
+                message = refundNotification.MessageText,
+                refundNotification.Data,
+                refundNotification.IsRead,
+                refundNotification.CreatedAt
+            }, cancellationToken);
+        }
+        else
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         return Ok(new { message = "Cập nhật trạng thái đơn hàng thành công." });
     }
