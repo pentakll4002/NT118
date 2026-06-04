@@ -50,6 +50,7 @@ async function ensureConnection() {
     .withUrl(`${API_BASE_URL}/hubs/notifications`, {
       accessTokenFactory: () => token,
     })
+    .configureLogging(signalR.LogLevel.None)
     .withAutomaticReconnect()
     .build();
 
