@@ -9,7 +9,7 @@ public interface IReviewService
 {
     Task<(bool CanReview, string Message)> CanReviewOrderAsync(long orderId, long userId, CancellationToken cancellationToken);
 
-    Task<ReviewDto> CreateReviewAsync(long userId, CreateReviewRequest req, CancellationToken cancellationToken);
+    Task<(ReviewDto Review, decimal RewardAmount)> CreateReviewAsync(long userId, CreateReviewRequest req, CancellationToken cancellationToken);
 
     Task<ReviewDto> UpdateReviewAsync(long userId, long reviewId, UpdateReviewRequest req, CancellationToken cancellationToken);
 
@@ -43,7 +43,7 @@ public class ReviewService(AppDbContext db) : IReviewService
         return (true, "");
     }
 
-    public async Task<ReviewDto> CreateReviewAsync(long userId, CreateReviewRequest req, CancellationToken cancellationToken)
+    public async Task<(ReviewDto Review, decimal RewardAmount)> CreateReviewAsync(long userId, CreateReviewRequest req, CancellationToken cancellationToken)
     {
         var (canReview, message) = await CanReviewOrderAsync(req.OrderId, userId, cancellationToken);
         if (!canReview)
@@ -78,6 +78,45 @@ public class ReviewService(AppDbContext db) : IReviewService
         };
 
         db.Reviews.Add(review);
+        
+        // Coin reward logic
+        decimal rewardAmount = 0m;
+        if (!string.IsNullOrWhiteSpace(req.Comment) && req.Comment.Trim().Length >= 50)
+        {
+            var order = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == req.OrderId, cancellationToken);
+            if (order != null)
+            {
+                rewardAmount = order.TotalAmount >= 200000m ? 2000m : 1000m;
+                
+                var wallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+                if (wallet == null)
+                {
+                    wallet = new Wallet
+                    {
+                        UserId = userId,
+                        Balance = 0m,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    db.Wallets.Add(wallet);
+                    await db.SaveChangesAsync(cancellationToken); // Save to generate Wallet.Id
+                }
+                
+                wallet.Balance += rewardAmount;
+                wallet.UpdatedAt = DateTime.UtcNow;
+                
+                db.WalletTransactions.Add(new WalletTransaction
+                {
+                    WalletId = wallet.Id,
+                    Amount = rewardAmount,
+                    Type = "reward",
+                    Description = $"Thưởng xu đánh giá sản phẩm thuộc đơn hàng {order.OrderNumber}",
+                    OrderId = order.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         await UpdateProductRatingAsync(req.ProductId, cancellationToken);
@@ -86,7 +125,7 @@ public class ReviewService(AppDbContext db) : IReviewService
         var reviewer = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         var profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
 
-        return MapReviewToDto(review, reviewer?.Username ?? "Anonymous", profile?.AvatarUrl);
+        return (MapReviewToDto(review, reviewer?.Username ?? "Anonymous", profile?.AvatarUrl), rewardAmount);
     }
 
     public async Task<ReviewDto> UpdateReviewAsync(long userId, long reviewId, UpdateReviewRequest req, CancellationToken cancellationToken)

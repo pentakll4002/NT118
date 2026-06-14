@@ -41,7 +41,12 @@ export interface OrderReviewStatusResponse {
   existingReviewId?: number;
 }
 
-export async function createReview(payload: CreateReviewPayload): Promise<ReviewDto> {
+export interface CreateReviewResponse {
+  review: ReviewDto;
+  rewardAmount: number;
+}
+
+export async function createReview(payload: CreateReviewPayload): Promise<CreateReviewResponse> {
   try {
     const res = await apiClient.post('/api/reviews', payload);
     return res.data?.data || res.data;

@@ -19,7 +19,7 @@ public class ReviewsController(IReviewService reviewService) : ControllerBase
         try
         {
             var result = await reviewService.CreateReviewAsync(userId, body, cancellationToken);
-            return Created($"/api/reviews/{result.Id}", result);
+            return Created($"/api/reviews/{result.Review.Id}", new { review = result.Review, rewardAmount = result.RewardAmount });
         }
         catch (InvalidOperationException ex)
         {

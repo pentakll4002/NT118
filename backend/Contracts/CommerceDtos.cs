@@ -104,6 +104,12 @@ public class CreateOrderRequest
 
     [MaxLength(50)]
     public string? VoucherCode { get; set; }
+
+    /// <summary>
+    /// Amount of coins (xu) to use as discount. 1 coin = 1 VND.
+    /// </summary>
+    [Range(0, double.MaxValue)]
+    public decimal CoinDiscount { get; set; } = 0;
 }
 
 public class EstimateShippingFeeRequest

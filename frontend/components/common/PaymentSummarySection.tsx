@@ -8,9 +8,10 @@ interface PaymentSummarySectionProps {
   shippingDiscount: number;
   finalTotal: number;
   voucherDiscount?: number;
+  coinDiscount?: number;
 }
 
-export default function PaymentSummarySection({ productPrice, shippingFee, shippingDiscount, finalTotal, voucherDiscount }: PaymentSummarySectionProps) {
+export default function PaymentSummarySection({ productPrice, shippingFee, shippingDiscount, finalTotal, voucherDiscount, coinDiscount }: PaymentSummarySectionProps) {
   return (
     <>
       <View style={styles.sectionBlock}>
@@ -32,6 +33,12 @@ export default function PaymentSummarySection({ productPrice, shippingFee, shipp
           <View style={styles.detailListRow}>
             <Text style={styles.detailListLabel}>Giảm từ voucher</Text>
             <Text style={styles.detailListDiscount}>-{voucherDiscount.toLocaleString('vi-VN')}đ</Text>
+          </View>
+        ) : null}
+        {coinDiscount ? (
+          <View style={styles.detailListRow}>
+            <Text style={styles.detailListLabel}>Giảm từ Shopee Xu</Text>
+            <Text style={styles.detailListDiscount}>-{coinDiscount.toLocaleString('vi-VN')}đ</Text>
           </View>
         ) : null}
         <View style={[styles.detailListRow, { marginTop: 8 }]}>

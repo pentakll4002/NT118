@@ -14,18 +14,19 @@ interface OrderSuccessPageProps {
   cartItems?: CheckoutCartItem[];
   finalTotal?: number;
   paymentUrl?: string;
+  rewardAmount?: number;
 }
 
 const { width } = Dimensions.get('window');
 const PRODUCT_WIDTH = (width - 48) / 2;
 
-export default function OrderSuccessPage({ isPendingPayment = false, cartItems = [], finalTotal = 0, paymentUrl }: OrderSuccessPageProps) {
+export default function OrderSuccessPage({ isPendingPayment = false, cartItems = [], finalTotal = 0, paymentUrl, rewardAmount = 0 }: OrderSuccessPageProps) {
   const [recommendedProducts, setRecommendedProducts] = React.useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = React.useState(true);
   const [turnsRemaining, setTurnsRemaining] = React.useState(1);
   const [claiming, setClaiming] = React.useState(false);
   const [rewardModalVisible, setRewardModalVisible] = React.useState(false);
-  const [rewardAmount, setRewardAmount] = React.useState(0);
+  const [receivedRewardAmount, setReceivedRewardAmount] = React.useState(0);
   const [rewardBalance, setRewardBalance] = React.useState(0);
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const bounceAnim = React.useRef(new Animated.Value(0)).current;
@@ -78,7 +79,7 @@ export default function OrderSuccessPage({ isPendingPayment = false, cartItems =
     try {
       const res = await claimGift();
       setTurnsRemaining(0);
-      setRewardAmount(res.amountClaimed);
+      setReceivedRewardAmount(res.amountClaimed);
       setRewardBalance(res.newBalance);
       setRewardModalVisible(true);
       
@@ -147,6 +148,13 @@ export default function OrderSuccessPage({ isPendingPayment = false, cartItems =
               {isPendingPayment ? 'Đang chờ thanh toán' : 'Đặt hàng thành công'}
             </Text>
           </View>
+
+          {rewardAmount > 0 && (
+            <View style={{ backgroundColor: 'rgba(255,215,0,0.2)', padding: 10, borderRadius: 8, marginBottom: 15, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
+              <Ionicons name="gift" size={20} color="#FFD700" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#FFD700', fontWeight: 'bold' }}>Chúc mừng! Bạn nhận được {rewardAmount} xu thưởng.</Text>
+            </View>
+          )}
           
           {isPendingPayment && paymentUrl && (
             <View style={styles.qrContainer}>
@@ -275,7 +283,7 @@ export default function OrderSuccessPage({ isPendingPayment = false, cartItems =
               resizeMode="contain"
             />
             
-            <Text style={styles.rewardText}>+{rewardAmount.toLocaleString('vi-VN')} Xu</Text>
+            <Text style={styles.rewardText}>+{receivedRewardAmount.toLocaleString('vi-VN')} Xu</Text>
             
             <Text style={styles.rewardSubtext}>
               Chúc mừng bạn đã nhận được xu từ hộp quà may mắn 100% trúng xu!
