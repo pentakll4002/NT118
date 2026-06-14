@@ -33,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+    public DbSet<LuckyWheelAccount> LuckyWheelAccounts => Set<LuckyWheelAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -478,6 +479,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Wallet)
                 .WithMany(x => x.Transactions)
                 .HasForeignKey(x => x.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<LuckyWheelAccount>(e =>
+        {
+            e.ToTable("lucky_wheel_accounts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            e.Property(x => x.FreeSpins).HasColumnName("free_spins");
+            e.Property(x => x.LastDailyClaimDate).HasColumnName("last_daily_claim_date");
+            e.Property(x => x.LastSlot1ClaimDate).HasColumnName("last_slot1_claim_date");
+            e.Property(x => x.LastSlot2ClaimDate).HasColumnName("last_slot2_claim_date");
+            e.HasIndex(x => x.UserId).IsUnique();
+
+            e.HasOne(x => x.User)
+                .WithOne()
+                .HasForeignKey<LuckyWheelAccount>(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

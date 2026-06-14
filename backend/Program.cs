@@ -574,6 +574,15 @@ using (var scope = app.Services.CreateScope())
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet ON wallet_transactions(wallet_id);
+
+        CREATE TABLE IF NOT EXISTS lucky_wheel_accounts (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            free_spins INTEGER NOT NULL DEFAULT 0,
+            last_daily_claim_date TIMESTAMP,
+            last_slot1_claim_date TIMESTAMP,
+            last_slot2_claim_date TIMESTAMP
+        );
     ");
 }
 

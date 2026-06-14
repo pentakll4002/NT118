@@ -118,6 +118,22 @@ const BuyerAccountScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Lucky Wheel Banner */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/lucky-wheel' as any)}
+          style={styles.luckyWheelBanner}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 26, marginRight: 10 }}>🎡</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Vòng Quay May Mắn</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>Quay miễn phí mỗi ngày · Trúng đến 50.000 xu!</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+          </View>
+        </TouchableOpacity>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>ĐƠN MUA</Text>
@@ -454,6 +470,19 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: '#e2e8f0',
+  },
+  luckyWheelBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#EE4D2D',
+    elevation: 3,
+    shadowColor: '#EE4D2D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });
 
