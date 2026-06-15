@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "src",
-    "slug": "src",
+    "name": "ShopeeLite",
+    "slug": "shopeelite",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/Loading.png",
-    "scheme": "src",
+    "scheme": "shopeelite",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "ios": {
