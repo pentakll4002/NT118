@@ -20,11 +20,10 @@ import { apiClient } from '../../lib/apiClient';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const WHEEL_SIZE = SCREEN_WIDTH - 32;
+const WHEEL_SIZE = Math.min(SCREEN_WIDTH * 1.05, 450);
 const RADIUS = WHEEL_SIZE / 2;
 const CENTER = RADIUS;
 
-// ── Types ───────────────────────────────────────────────────────────────
 interface Prize {
   id: string;
   label: string;
@@ -40,37 +39,37 @@ interface WheelInfo {
   prizes: Prize[];
 }
 
-// ── Wheel color palette (alternating warm/cool for contrast) ─────────
 const SLICE_COLORS = [
-  '#FF2D55', // Xu Đặc Biệt – nổi bật nhất (hồng đỏ)
-  '#FF9500', // Xu Đại – cam
-  '#34C759', // Xu 700 – xanh lá
-  '#5856D6', // Xu 500 – tím
-  '#007AFF', // Xu 100 – xanh dương
-  '#FF9500', // Voucher 15% – cam
-  '#34C759', // Freeship – xanh lá
-  '#8E8E93', // Chúc may mắn – xám
+  '#FF2D55', 
+  '#FF9500', 
+  '#34C759', 
+  '#5856D6', 
+  '#007AFF', 
+  '#FF9500', 
+  '#34C759', 
+  '#8E8E93', 
 ];
 
-// ── Emoji for each prize type ────────────────────────────────────────
+
 const PRIZE_EMOJI: Record<string, string> = {
   xu_special: '💎',
-  xu_big: '💰',
-  xu_700: '🪙',
-  xu_500: '🪙',
-  xu_100: '🪙',
-  voucher_15: '🏷️',
-  freeship: '🚚',
+  xu_big: '🌟',
+  xu_700: '⭐',
+  xu_500: '⭐',
+  xu_100: '⭐',
+  voucher_15: '🎫',
+  freeship: '📦',
   miss: '🍀',
 };
 
-// ── Short label for display on the wheel ──
 function getShortLabel(prize: Prize): string {
   if (prize.id === 'xu_special') return 'XU ĐẶC BIỆT';
   if (prize.id === 'xu_big') return 'XU ĐẠI';
-  if (prize.id === 'xu_700' || prize.id === 'xu_500' || prize.id === 'xu_100') return 'XU NHỎ';
-  if (prize.id === 'voucher_15') return 'VOUCHER -15%';
-  if (prize.id === 'freeship') return 'FREESHIP';
+  if (prize.id === 'xu_700') return 'XU TIỂU';
+  if (prize.id === 'xu_500') return 'XU TIỂU';
+  if (prize.id === 'xu_100') return 'XU TIỂU';
+  if (prize.id === 'voucher_15') return 'VOUCHER GIẢM GIÁ';
+  if (prize.id === 'freeship') return 'VOUCHER FREESHIP';
   if (prize.id === 'miss') return 'THỬ LẠI';
   return prize.label;
 }
@@ -266,17 +265,7 @@ export default function LuckyWheelPage() {
                   {info.prizes.map((prize, index) => {
                     const color = SLICE_COLORS[index % SLICE_COLORS.length];
                     const label = getShortLabel(prize);
-                    const midAngle = ((index + 0.5) * 360) / info.prizes.length;
-                    
-                    // Left half of the wheel is from 90 to 270 degrees
-                    const isLeft = midAngle > 90 && midAngle < 270;
                     const coords = getLabelCoords(index, info.prizes.length, 0.55);
-                    
-                    let textRotation = midAngle;
-                    if (isLeft) {
-                      textRotation += 180;
-                    }
-
                     return (
                       <G key={prize.id}>
                         <Path
@@ -289,11 +278,11 @@ export default function LuckyWheelPage() {
                           x={coords.x}
                           y={coords.y}
                           fill="#fff"
-                          fontSize="17"
+                          fontSize={WHEEL_SIZE < 350 ? '14' : '17'}
                           fontWeight="800"
                           textAnchor="middle"
                           alignmentBaseline="middle"
-                          transform={`rotate(${textRotation}, ${coords.x}, ${coords.y})`}
+                          transform={`rotate(${coords.angle}, ${coords.x}, ${coords.y})`}
                         >
                           {label}
                         </SvgText>
@@ -315,7 +304,7 @@ export default function LuckyWheelPage() {
           </View>
 
           {/* ── Spin buttons ──────────────────────────────────────── */}
-          <View style={styles.actionContainer}>
+          <View style={[styles.actionContainer, { marginBottom: 16 }]}>
             {info.freeSpins > 0 ? (
               <TouchableOpacity
                 style={[styles.spinButton, styles.spinButtonFree]}
@@ -346,68 +335,63 @@ export default function LuckyWheelPage() {
             </TouchableOpacity>
           </View>
 
+          {/* ── Prize legend ─────────────────────────────────────── */}
+          <View style={styles.legendContainer}>
+            <Text style={styles.legendTitle}>🏆 Cơ cấu giải thưởng</Text>
+            <View style={styles.legendGrid}>
+              {(() => {
+                const grouped: any[] = [];
+                let hasSmallXu = false;
+
+                info.prizes.forEach((prize, index) => {
+                  const color = SLICE_COLORS[index % SLICE_COLORS.length];
+                  if (['xu_700', 'xu_500', 'xu_100'].includes(prize.id)) {
+                    if (!hasSmallXu) {
+                      grouped.push({
+                        id: 'xu_small_group',
+                        emoji: '🟡',
+                        color: '#007AFF',
+                        desc: '100 - 500 - 700 xu',
+                        tag: 'XU NHỎ'
+                      });
+                      hasSmallXu = true;
+                    }
+                  } else {
+                    const emoji = PRIZE_EMOJI[prize.id] || '🎁';
+                    let desc = '';
+                    if (prize.xuAmount > 0) desc = `${prize.xuAmount.toLocaleString('vi-VN')} xu`;
+                    else if (prize.id === 'voucher_15') desc = 'Giảm 15%';
+                    else if (prize.id === 'freeship') desc = 'Miễn phí vận chuyển';
+                    else desc = 'Chúc may mắn lần sau';
+
+                    let tag = '';
+                    if (prize.id === 'xu_special') tag = 'ĐẶC BIỆT';
+                    else if (prize.id === 'xu_big') tag = 'XU ĐẠI';
+
+                    grouped.push({ id: prize.id, emoji, color, desc, tag });
+                  }
+                });
+
+                return grouped.map((item) => (
+                  <View key={item.id} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                    <Text style={styles.legendEmoji}>{item.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.legendItemText}>{item.desc}</Text>
+                      {item.tag ? <Text style={[styles.legendTag, item.id === 'xu_special' && styles.legendTagSpecial]}>{item.tag}</Text> : null}
+                    </View>
+                  </View>
+                ));
+              })()}
+            </View>
+          </View>
+
           {/* ── Hint ──────────────────────────────────────────────── */}
           <View style={styles.hintBox}>
             <Ionicons name="time-outline" size={16} color="#FFD700" />
             <Text style={styles.hintText}>
               Đăng nhập hàng ngày & vào khung giờ vàng 7h-8h và 19h-20h để nhận lượt quay miễn phí!
             </Text>
-          </View>
-
-          {/* ── Prize legend (below buttons) ──────────────────────── */}
-          <View style={styles.legendContainer}>
-            <Text style={styles.legendTitle}>Cơ cấu giải thưởng</Text>
-            <View style={styles.legendGrid}>
-              
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>💎</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>50.000 xu</Text>
-                  <Text style={[styles.legendTag, styles.legendTagSpecial]}>ĐẶC BIỆT</Text>
-                </View>
-              </View>
-
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>💰</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>2.000 xu</Text>
-                  <Text style={styles.legendTag}>XU ĐẠI</Text>
-                </View>
-              </View>
-
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>🪙</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>100 - 500 - 700 xu</Text>
-                  <Text style={styles.legendTag}>XU NHỎ</Text>
-                </View>
-              </View>
-
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>🏷️</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>Giảm 15%</Text>
-                  <Text style={styles.legendTag}>VOUCHER</Text>
-                </View>
-              </View>
-
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>🚚</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>Miễn phí vận chuyển</Text>
-                  <Text style={styles.legendTag}>FREESHIP</Text>
-                </View>
-              </View>
-
-              <View style={styles.legendItem}>
-                <Text style={styles.legendEmoji}>🍀</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.legendItemText}>Chúc may mắn lần sau</Text>
-                  <Text style={styles.legendTag}>THỬ LẠI</Text>
-                </View>
-              </View>
-
-            </View>
           </View>
           <View style={{ height: 30 }} />
         </ScrollView>
@@ -750,6 +734,7 @@ const styles = StyleSheet.create({
   },
   modalEmoji: {
     fontSize: 56,
+    lineHeight: 70,
     marginBottom: 8,
   },
   modalTitle: {
@@ -774,7 +759,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,215,0,0.2)',
   },
   modalPrizeEmoji: {
-    fontSize: 32,
+    fontSize: 34,
+    lineHeight: 44,
+    minWidth: 60,
+    textAlign: 'center',
     marginBottom: 8,
   },
   modalHighlight: {

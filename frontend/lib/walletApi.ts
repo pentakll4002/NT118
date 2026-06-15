@@ -4,6 +4,7 @@ export interface WalletDTO {
   id: number;
   userId: number;
   balance: number;
+  coinBalance: number;
   createdAt: string;
   updatedAt: string;
 }
