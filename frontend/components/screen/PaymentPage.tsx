@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import PaymentAddressSection, { UserAddressType } from '../common/PaymentAddressSection';
 import PaymentProductSection, { CheckoutCartItem } from '../common/PaymentProductSection';
 import PaymentShippingSection from '../common/PaymentShippingSection';
@@ -472,7 +472,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
           <View style={styles.sectionBlock}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <Ionicons name="logo-bitcoin" size={20} color="#FF9100" style={{ marginRight: 8 }} />
+                <FontAwesome5 name="coins" size={18} color="#FF9100" style={{ marginRight: 8 }} />
                 <View>
                   <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Shopee Xu</Text>
                   <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
