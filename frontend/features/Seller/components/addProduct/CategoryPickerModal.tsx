@@ -1,14 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  SafeAreaView,
-  Dimensions,
-} from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SellerCategory } from '../../../../lib/sellerApi';
 
@@ -45,8 +37,7 @@ const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={categories}
+          <FlashList data={categories}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (

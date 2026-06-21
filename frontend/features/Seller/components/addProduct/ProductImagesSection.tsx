@@ -1,25 +1,30 @@
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ProductImagesSectionProps {
   images: string[];
+  variantImages?: string[];
   onImagesChange: (images: string[]) => void;
 }
 
-const ProductImagesSection: React.FC<ProductImagesSectionProps> = ({ images, onImagesChange }) => {
-  const slots = Array.from({ length: 6 }, (_, index) => index);
+const ProductImagesSection: React.FC<ProductImagesSectionProps> = ({ images, variantImages = [], onImagesChange }) => {
+  const combinedImages = [...images, ...variantImages];
+  const maxLimit = 8;
+  const slotsCount = Math.max(maxLimit, combinedImages.length + (combinedImages.length < maxLimit ? 0 : 1));
+  const slots = Array.from({ length: slotsCount }, (_, index) => index);
 
   const pickImage = async () => {
-    if (images.length >= 6) {
-      Alert.alert('Thông báo', 'Bạn chỉ có thể chọn tối đa 6 hình ảnh.');
+    if (combinedImages.length >= maxLimit) {
+      Alert.alert('Thông báo', `Bạn chỉ có thể chọn tối đa ${maxLimit} hình ảnh.`);
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      selectionLimit: 6 - images.length,
+      selectionLimit: maxLimit - combinedImages.length,
       quality: 0.8,
     });
 
@@ -39,14 +44,16 @@ const ProductImagesSection: React.FC<ProductImagesSectionProps> = ({ images, onI
     <View style={styles.section}>
       <View style={styles.sectionTitleRow}>
         <Text style={styles.sectionTitle}>Hình ảnh sản phẩm</Text>
-        <Text style={styles.sectionCount}>{images.length} / 6</Text>
+        <Text style={styles.sectionCount}>{combinedImages.length} / {maxLimit}</Text>
       </View>
       <Text style={styles.hintText}>Ảnh bìa nên rõ nét, nền sáng và thấy đầy đủ sản phẩm.</Text>
 
       <View style={styles.imageGrid}>
         {slots.map((slotIndex) => {
-          const hasImage = slotIndex < images.length;
-          const imageUri = hasImage ? images[slotIndex] : null;
+          const hasMainImage = slotIndex < images.length;
+          const hasVariantImage = slotIndex >= images.length && slotIndex < combinedImages.length;
+          const hasImage = hasMainImage || hasVariantImage;
+          const imageUri = hasImage ? combinedImages[slotIndex] : null;
 
           return (
             <TouchableOpacity
@@ -61,12 +68,19 @@ const ProductImagesSection: React.FC<ProductImagesSectionProps> = ({ images, onI
               {hasImage ? (
                 <View style={styles.imageWrapper}>
                   <Image source={{ uri: imageUri! }} style={styles.pickedImage} />
-                  <TouchableOpacity
-                    style={styles.removeBtn}
-                    onPress={() => removeImage(slotIndex)}
-                  >
-                    <Ionicons name="close-circle" size={18} color="#f87171" />
-                  </TouchableOpacity>
+                  {hasMainImage && (
+                    <TouchableOpacity
+                      style={styles.removeBtn}
+                      onPress={() => removeImage(slotIndex)}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#f87171" />
+                    </TouchableOpacity>
+                  )}
+                  {hasVariantImage && (
+                    <View style={styles.variantBadge}>
+                      <Text style={styles.variantBadgeText}>Phân loại</Text>
+                    </View>
+                  )}
                 </View>
               ) : (
                 <>
@@ -154,6 +168,20 @@ const styles = StyleSheet.create({
     right: -6,
     backgroundColor: '#fff',
     borderRadius: 10,
+  },
+  variantBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  variantBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '600',
   },
 });
 

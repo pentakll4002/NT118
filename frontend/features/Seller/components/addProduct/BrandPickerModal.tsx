@@ -1,15 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  SafeAreaView,
-  Dimensions,
-  TextInput,
-} from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../../../../lib/sellerApi';
 
@@ -82,8 +73,7 @@ const BrandPickerModal: React.FC<BrandPickerModalProps> = ({
             />
           </View>
 
-          <FlatList
-            data={filteredBrands}
+          <FlashList data={filteredBrands}
             keyExtractor={(item) => item}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (

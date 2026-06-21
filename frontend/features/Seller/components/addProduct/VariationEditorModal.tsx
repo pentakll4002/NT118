@@ -1,17 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  TextInput,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { Image } from 'expo-image';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CreateProductVariantPayload } from '../../../../lib/sellerApi';
+import * as ImagePicker from 'expo-image-picker';
+import { CreateProductVariantPayload, sellerApi } from '../../../../lib/sellerApi';
 
 interface VariationEditorModalProps {
   visible: boolean;
@@ -29,6 +21,7 @@ const VariationEditorModal: React.FC<VariationEditorModalProps> = ({
   const [localVariants, setLocalVariants] = useState<CreateProductVariantPayload[]>(
     variants.length > 0 ? [...variants] : []
   );
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
   // Sync local state when modal opens or variants prop changes
   useEffect(() => {
@@ -63,6 +56,31 @@ const VariationEditorModal: React.FC<VariationEditorModalProps> = ({
 
     newList[index] = item;
     setLocalVariants(newList);
+  };
+
+  const handlePickImage = async (index: number) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setUploadingIndex(index);
+        const url = await sellerApi.uploadImage(result.assets[0].uri);
+        updateVariant(index, 'imageUrl', url);
+      }
+    } catch (error) {
+      Alert.alert('Lỗi', 'Không thể tải ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    updateVariant(index, 'imageUrl', '');
   };
 
   const handleSave = () => {
@@ -152,6 +170,29 @@ const VariationEditorModal: React.FC<VariationEditorModalProps> = ({
                       placeholder="0"
                     />
                   </View>
+                </View>
+
+                <View style={styles.imageSection}>
+                  <Text style={styles.inputLabel}>ẢNH BIẾN THỂ (TÙY CHỌN)</Text>
+                  {v.imageUrl ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <Image source={{ uri: v.imageUrl }} style={styles.imagePreview} />
+                      <TouchableOpacity style={styles.removeImageBtn} onPress={() => handleRemoveImage(index)}>
+                        <Ionicons name="close-circle" size={24} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.imageUploadBtn} onPress={() => handlePickImage(index)} disabled={uploadingIndex === index}>
+                      {uploadingIndex === index ? (
+                        <ActivityIndicator size="small" color="#3b82f6" />
+                      ) : (
+                        <>
+                          <Ionicons name="image-outline" size={24} color="#64748b" />
+                          <Text style={styles.imageUploadText}>Tải ảnh lên</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ))}
@@ -280,6 +321,47 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontWeight: '600',
     fontSize: 14,
+  },
+  imageSection: {
+    marginTop: 12,
+  },
+  imageUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+  },
+  imageUploadText: {
+    marginLeft: 8,
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
   },
 });
 
