@@ -1,18 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  ActivityIndicator,
-  Alert,
-  Modal,
-} from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -59,7 +48,7 @@ const ChatDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlashList>(null);
 
   // Load current user ID
   useEffect(() => {
@@ -229,8 +218,7 @@ const ChatDetailScreen = () => {
               <Text style={styles.loadingText}>Đang tải tin nhắn...</Text>
             </View>
           ) : (
-            <FlatList
-              ref={flatListRef}
+            <FlashList ref={flatListRef}
               data={messages}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (

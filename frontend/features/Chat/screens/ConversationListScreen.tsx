@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -167,8 +168,7 @@ const ConversationListScreen = () => {
             <Text style={styles.loadingText}>Đang tải tin nhắn...</Text>
           </View>
         ) : (
-          <FlatList
-            data={filteredConversations}
+          <FlashList data={filteredConversations}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <ConversationItem item={item} onPress={() => handlePress(item)} />
