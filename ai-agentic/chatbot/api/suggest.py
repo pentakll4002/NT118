@@ -21,7 +21,7 @@ from suggest import (
 
 router = APIRouter(prefix="/api/suggest", tags=["suggestions"])
 
-CORE_SERVICE_URL = os.getenv("CORE_SERVICE_URL", "http://localhost:3003")
+CORE_SERVICE_URL = os.getenv("CORE_SERVICE_URL", os.getenv("BACKEND_URL", "http://localhost:5058"))
 
 
 class SearchSuggestRequest(BaseModel):
@@ -73,7 +73,7 @@ async def _fetch_catalog(category: str = None, limit: int = 50):
         params["category"] = category
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{CORE_SERVICE_URL}/api/v1/products", params=params)
+            resp = await client.get(f"{CORE_SERVICE_URL}/api/products", params=params)
             resp.raise_for_status()
             data = resp.json()
             items = data.get("data", {})
@@ -102,7 +102,7 @@ async def _fetch_product(product_id: int):
     # Fallback to HTTP
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{CORE_SERVICE_URL}/api/v1/products/{product_id}")
+            resp = await client.get(f"{CORE_SERVICE_URL}/api/products/{product_id}")
             resp.raise_for_status()
             data = resp.json()
             return data.get("data", data)

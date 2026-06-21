@@ -145,6 +145,11 @@ public class ShopsController(AppDbContext db) : ControllerBase
         if (shop is null)
             return NotFound(new { message = "Bạn chưa có shop." });
 
+        var defaultAddress = await db.UserAddresses
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.IsDefault)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return Ok(new
         {
             shop.Id,
@@ -165,6 +170,8 @@ public class ShopsController(AppDbContext db) : ControllerBase
             shop.TotalProducts,
             shop.CreatedAt,
             shop.UpdatedAt,
+            Latitude = defaultAddress?.Latitude,
+            Longitude = defaultAddress?.Longitude
         });
     }
 
@@ -180,17 +187,69 @@ public class ShopsController(AppDbContext db) : ControllerBase
         if (shop is null)
             return NotFound(new { message = "Bạn chưa có shop." });
 
-        if (!string.IsNullOrWhiteSpace(body.Name)) shop.Name = body.Name;
-        if (!string.IsNullOrWhiteSpace(body.Description)) shop.Description = body.Description;
-        if (!string.IsNullOrWhiteSpace(body.LogoUrl)) shop.LogoUrl = body.LogoUrl;
-        if (!string.IsNullOrWhiteSpace(body.CoverImageUrl)) shop.CoverImageUrl = body.CoverImageUrl;
-        if (!string.IsNullOrWhiteSpace(body.Address)) shop.Address = body.Address;
-        if (!string.IsNullOrWhiteSpace(body.Phone)) shop.Phone = body.Phone;
-        if (!string.IsNullOrWhiteSpace(body.Email)) shop.Email = body.Email;
-        if (!string.IsNullOrWhiteSpace(body.BusinessHours)) shop.BusinessHours = body.BusinessHours;
-        if (!string.IsNullOrWhiteSpace(body.PickupAddress)) shop.PickupAddress = body.PickupAddress;
-        shop.UpdatedAt = DateTime.UtcNow;
+        bool isChanged = false;
 
+        if (!string.IsNullOrWhiteSpace(body.Name) && shop.Name != body.Name) { shop.Name = body.Name; isChanged = true; }
+        if (body.Description != null && shop.Description != body.Description) { shop.Description = body.Description; isChanged = true; }
+        if (body.LogoUrl != null && shop.LogoUrl != body.LogoUrl) { shop.LogoUrl = body.LogoUrl; isChanged = true; }
+        if (body.CoverImageUrl != null && shop.CoverImageUrl != body.CoverImageUrl) { shop.CoverImageUrl = body.CoverImageUrl; isChanged = true; }
+        if (!string.IsNullOrWhiteSpace(body.Address) && shop.Address != body.Address) { shop.Address = body.Address; isChanged = true; }
+        if (!string.IsNullOrWhiteSpace(body.Phone) && shop.Phone != body.Phone) { shop.Phone = body.Phone; isChanged = true; }
+        if (!string.IsNullOrWhiteSpace(body.Email) && shop.Email != body.Email) { shop.Email = body.Email; isChanged = true; }
+        if (body.BusinessHours != null && shop.BusinessHours != body.BusinessHours) { shop.BusinessHours = body.BusinessHours; isChanged = true; }
+        if (body.PickupAddress != null && shop.PickupAddress != body.PickupAddress) { shop.PickupAddress = body.PickupAddress; isChanged = true; }
+
+        var defaultAddress = await db.UserAddresses
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.IsDefault, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(body.Address) || body.Latitude.HasValue || body.Longitude.HasValue)
+        {
+            var streetAddr = body.Address ?? shop.Address ?? "Cửa hàng Address";
+            if (defaultAddress == null)
+            {
+                defaultAddress = new UserAddress
+                {
+                    UserId = userId,
+                    RecipientName = shop.Name ?? "Cửa hàng",
+                    RecipientPhone = shop.Phone ?? "0900000000",
+                    Province = "Hồ Chí Minh",
+                    District = "Quận 1",
+                    Ward = "Phường Bến Nghé",
+                    StreetAddress = streetAddr,
+                    Latitude = body.Latitude ?? 10.7712,
+                    Longitude = body.Longitude ?? 106.6979,
+                    IsDefault = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.UserAddresses.Add(defaultAddress);
+                isChanged = true;
+            }
+            else
+            {
+                if (body.Address != null && defaultAddress.StreetAddress != body.Address)
+                {
+                    defaultAddress.StreetAddress = body.Address;
+                    isChanged = true;
+                }
+                if (body.Latitude.HasValue && defaultAddress.Latitude != body.Latitude)
+                {
+                    defaultAddress.Latitude = body.Latitude.Value;
+                    isChanged = true;
+                }
+                if (body.Longitude.HasValue && defaultAddress.Longitude != body.Longitude)
+                {
+                    defaultAddress.Longitude = body.Longitude.Value;
+                    isChanged = true;
+                }
+            }
+        }
+
+        if (!isChanged)
+        {
+            return Ok(new { message = "Không có thông tin thay đổi." });
+        }
+
+        shop.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return Ok(new { message = "Cập nhật thông tin cửa hàng thành công." });
     }

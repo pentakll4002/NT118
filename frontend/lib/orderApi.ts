@@ -2,7 +2,6 @@ import { apiClient } from './apiClient';
 
 const USE_MOCK = false;
 
-// ── Types ───────────────────────────────────────────────────────────
 export interface OrderDetail {
   id: number;
   orderNumber: string;
@@ -31,9 +30,26 @@ export interface OrderItem {
   totalPrice: number;
 }
 
+export interface UserAddress {
+  recipientName: string;
+  recipientPhone: string;
+  province: string;
+  district: string;
+  ward: string;
+  streetAddress: string;
+  latitude: number | null;
+  longitude: number | null;
+  poiName: string | null;
+  formattedAddress: string | null;
+}
+
 export interface OrderDetailResponse {
   order: OrderDetail;
   items: OrderItem[];
+  shippingAddress?: UserAddress | null;
+  shopName?: string;
+  shopLatitude?: number | null;
+  shopLongitude?: number | null;
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'cancelled' | 'refunded' | string;
@@ -97,6 +113,7 @@ export function formatPaymentMethod(method: string): string {
   const map: Record<string, string> = {
     cod: 'Thanh toán khi nhận hàng (COD)',
     vietqr: 'VietQR',
+    wallet: 'Ví ShopeePay',
   };
   return map[method.toLowerCase()] || method;
 }

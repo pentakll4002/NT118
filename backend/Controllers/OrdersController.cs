@@ -12,7 +12,7 @@ using Backend.Services;
 [ApiController]
 [Authorize]
 [Route("api/orders")]
-public class OrdersController(AppDbContext db, INotificationRealtimeService notificationService) : ControllerBase
+public class OrdersController(AppDbContext db, INotificationRealtimeService notificationService, IShipperTrackingSimulator trackingSimulator) : ControllerBase
 {
     private const decimal FallbackShippingFee = 25000m;
 
@@ -104,7 +104,48 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
             })
             .ToListAsync(cancellationToken);
 
-        return Ok(new { order, items });
+        var shippingAddress = await db.UserAddresses
+            .AsNoTracking()
+            .Where(x => x.Id == order.ShippingAddressId)
+            .Select(x => new
+            {
+                x.RecipientName,
+                x.RecipientPhone,
+                x.Province,
+                x.District,
+                x.Ward,
+                x.StreetAddress,
+                x.Latitude,
+                x.Longitude,
+                x.PoiName,
+                x.FormattedAddress,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var shop = await db.Shops
+            .AsNoTracking()
+            .Where(x => x.Id == order.ShopId)
+            .Select(x => new { x.Name, x.OwnerId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        double? shopLatitude = null;
+        double? shopLongitude = null;
+        if (shop != null)
+        {
+            var shopAddress = await db.UserAddresses
+                .AsNoTracking()
+                .Where(x => x.UserId == shop.OwnerId && x.Latitude.HasValue && x.Longitude.HasValue)
+                .OrderByDescending(x => x.IsDefault)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (shopAddress != null)
+            {
+                shopLatitude = shopAddress.Latitude;
+                shopLongitude = shopAddress.Longitude;
+            }
+        }
+
+        return Ok(new { order, items, shippingAddress, shopName = shop?.Name, shopLatitude, shopLongitude });
     }
 
     [HttpPost]
@@ -415,6 +456,11 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
 
         order.Status = body.Status;
         order.UpdatedAt = DateTime.UtcNow;
+
+        if (body.Status == OrderStatus.shipping && oldStatus != OrderStatus.shipping)
+        {
+            trackingSimulator.StartTrackingSimulation(order.Id);
+        }
 
         if ((body.Status == OrderStatus.cancelled || body.Status == OrderStatus.refunded)
             && oldPaymentStatus == PaymentStatus.paid

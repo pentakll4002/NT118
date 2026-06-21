@@ -85,6 +85,12 @@ try:
 except ImportError as e:
     print(f"Warning: Search router not available: {e}")
 
+try:
+    from api import voice
+    app.include_router(voice.router)
+except ImportError as e:
+    print(f"Warning: Voice router not available: {e}")
+
 if upload_available:
     app.include_router(upload.router)
 

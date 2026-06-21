@@ -77,23 +77,33 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
   }, [value, isAILoading, onAIPress, onAISearchResult, onChangeText, onSubmitEditing]);
 
-  const content = (
-    <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color="#BBBBBB" />
+  return (
+    <View style={styles.searchContainer}>
+      <View style={styles.searchBar}>
         {onPress ? (
-          <Text style={[styles.searchInput, { paddingVertical: 10 }]}>{value || placeholder}</Text>
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            onPress={onPress}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+          >
+            <Ionicons name="search" size={20} color="#BBBBBB" />
+            <Text style={[styles.searchInput, { paddingVertical: 10 }]}>{value || placeholder}</Text>
+          </TouchableOpacity>
         ) : (
-          <TextInput 
-            placeholder={placeholder}
-            placeholderTextColor="#BBBBBB"
-            style={styles.searchInput}
-            value={value}
-            onChangeText={onChangeText}
-            returnKeyType="search"
-            onSubmitEditing={onSubmitEditing}
-            editable={editable}
-            autoFocus={autoFocus}
-          />
+          <>
+            <Ionicons name="search" size={20} color="#BBBBBB" />
+            <TextInput 
+              placeholder={placeholder}
+              placeholderTextColor="#BBBBBB"
+              style={styles.searchInput}
+              value={value}
+              onChangeText={onChangeText}
+              returnKeyType="search"
+              onSubmitEditing={onSubmitEditing}
+              editable={editable}
+              autoFocus={autoFocus}
+            />
+          </>
         )}
         {(onAIPress || onAISearchResult) && (
           <TouchableOpacity
@@ -111,21 +121,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
             )}
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={onVoicePress}>
-          <MaterialCommunityIcons name="microphone-outline" size={24} color="#BBBBBB" />
+        <TouchableOpacity onPress={onVoicePress} style={styles.voiceButton}>
+          <MaterialCommunityIcons name="microphone" size={24} color="#F73658" />
         </TouchableOpacity>
       </View>
-  );
-
-  return (
-    <View style={styles.searchContainer}>
-      {onPress ? (
-        <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-          {content}
-        </TouchableOpacity>
-      ) : (
-        content
-      )}
     </View>
   );
 };
@@ -161,6 +160,13 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  voiceButton: {
+    paddingLeft: 8,
+    paddingRight: 4,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

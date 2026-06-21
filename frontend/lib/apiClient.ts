@@ -6,7 +6,6 @@ import { getAuthToken } from './authToken';
 const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const extraUrl = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl?.trim();
 
-/** Metro/dev server host during `expo start` — dùng để gọi backend cùng máy (thiết bị thật / Expo Go). */
 function inferredDevApiHost(): string | undefined {
   const hostUri = Constants.expoConfig?.hostUri;
   if (!hostUri) return undefined;
@@ -25,9 +24,7 @@ function defaultBaseUrl(): string {
   if (lanHost) {
     url = `http://${lanHost}:5058`;
   } else if (Platform.OS === 'android') {
-    // 10.0.2.2 is for standard Android Emulator
-    // 10.0.3.2 is for Genymotion/LDPlayer in some cases
-    url = 'http://10.0.2.2:5058'; 
+    url = 'http://10.0.2.2:5058';
   }
 
   if (__DEV__) console.log(`[API] Base URL resolved to: ${url}`);
@@ -66,7 +63,6 @@ apiClient.interceptors.request.use(async (config) => {
 
 apiClient.interceptors.response.use(
   (res) => {
-    // Automatically unwrap C# ApiResponse wrapper if present
     if (res.data && typeof res.data === 'object' && 'success' in res.data && 'data' in res.data) {
       res.data = res.data.data;
     }

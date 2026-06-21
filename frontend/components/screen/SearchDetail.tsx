@@ -3,6 +3,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, Text, ScrollView, Dimens
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import CustomSearchHeader from '../common/CustomSearchHeader';
+import VoiceAssistantModal from '../common/VoiceAssistantModal';
 import SuggestionCard from '../common/SuggestionCard';
 import ProductCard, { Product } from '../common/ProductCard';
 import { getProducts, formatPrice, formatSold, ProductDTO } from '../../lib/productApi';
@@ -36,6 +37,7 @@ export default function SearchDetail({ visible, onClose }: SearchDetailProps) {
   const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [isVoiceVisible, setIsVoiceVisible] = useState(false);
 
   // Load suggestions initially when opened
   useEffect(() => {
@@ -146,6 +148,7 @@ export default function SearchDetail({ visible, onClose }: SearchDetailProps) {
           onBackPress={onClose}
           autoFocus={visible}
           onAIPress={handleAIPress}
+          onVoicePress={() => setIsVoiceVisible(true)}
         />
         
         {loading && searchQuery.trim() ? (
@@ -193,6 +196,10 @@ export default function SearchDetail({ visible, onClose }: SearchDetailProps) {
             )}
           </ScrollView>
         )}
+        <VoiceAssistantModal 
+          visible={isVoiceVisible} 
+          onClose={() => setIsVoiceVisible(false)} 
+        />
       </SafeAreaView>
     </Modal>
   );

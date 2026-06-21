@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
+import VoiceAssistantModal from '../common/VoiceAssistantModal';
 import ProductCard, { Product } from '../common/ProductCard';
 import { getProducts, ProductDTO, formatPrice, formatSold } from '../../lib/productApi';
 import { toggleFavorite, getFavorites } from '../../lib/wishlistApi';
@@ -34,6 +35,7 @@ const TrendProduct = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [sort, setSort] = useState<SortOption>('popular');
   const [favoriteIds, setFavoriteIds] = useState<Set<number | string>>(new Set());
+  const [isVoiceVisible, setIsVoiceVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -91,7 +93,7 @@ const TrendProduct = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Header />
-      <SearchBar />
+      <SearchBar onVoicePress={() => setIsVoiceVisible(true)} />
       
       <View style={styles.headerRow}>
         <Text style={styles.productCount}>
@@ -164,6 +166,7 @@ const TrendProduct = () => {
           </View>
         </ScrollView>
       )}
+      <VoiceAssistantModal visible={isVoiceVisible} onClose={() => setIsVoiceVisible(false)} />
     </SafeAreaView>
   );
 };

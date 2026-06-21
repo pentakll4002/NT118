@@ -37,6 +37,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured. See appsettings.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
+{
     options.UseNpgsql(connectionString, npgsql =>
     {
         npgsql.MapEnum<UserRole>("user_role");
@@ -51,7 +52,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         npgsql.MapEnum<VoucherDiscountType>("voucher_discount_type");
         npgsql.MapEnum<MessageType>("message_type");
         npgsql.EnableRetryOnFailure();
-    }));
+    });
+    options.ConfigureWarnings(warnings => 
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Jwt options are not configured.");
@@ -103,6 +107,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<INotificationRealtimeService, NotificationRealtimeService>();
+builder.Services.AddScoped<IShipperTrackingSimulator, ShipperTrackingSimulator>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ApiExceptionFilter>();
@@ -166,12 +171,45 @@ using (var scope = app.Services.CreateScope())
     Console.WriteLine("🚀 [Seed] Starting database initialization...");
     try
     {
-        db.Database.EnsureCreated();
+        bool usersTableExists = false;
+        try
+        {
+            usersTableExists = db.Database.SqlQueryRaw<bool>(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users')"
+            ).AsEnumerable().FirstOrDefault();
+        }
+        catch
+        {
+            // Database or table might not exist yet
+        }
+
+        if (!usersTableExists)
+        {
+            Console.WriteLine("🔄 [Seed] Database tables do not exist. Dropping 'addresses' table to avoid migration conflicts...");
+            try
+            {
+                db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS addresses CASCADE;");
+            }
+            catch (Exception dropEx)
+            {
+                Console.WriteLine($"⚠️ [Seed] Failed to drop addresses table: {dropEx.Message}");
+            }
+
+            Console.WriteLine("🔄 [Seed] Running migrations...");
+            db.Database.Migrate();
+        }
+        else
+        {
+            Console.WriteLine("✅ [Seed] Database tables exist.");
+        }
+
         var accounts = new[]
         {
             new { Email = "admin@nt118.com", Username = "admin", Role = UserRole.admin, Password = "admin123", FullName = "System Administrator" },
+            new { Email = "admin2@nt118.com", Username = "admin2", Role = UserRole.admin, Password = "admin123", FullName = "System Administrator 2" },
             new { Email = "buyer@nt118.com", Username = "buyer", Role = UserRole.buyer, Password = "buyer123", FullName = "Default Buyer" },
-            new { Email = "seller@shopeelite.com", Username = "seller", Role = UserRole.seller, Password = "seller", FullName = "Shopee Elite Seller" }
+            new { Email = "seller@shopeelite.com", Username = "seller", Role = UserRole.seller, Password = "seller", FullName = "Shopee Elite Seller" },
+            new { Email = "gearvn.seller@nt118.local", Username = "gearvn_store", Role = UserRole.seller, Password = "gearvn123", FullName = "GearVN Seller" }
         };
 
         foreach (var acc in accounts)
@@ -254,6 +292,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
+        Console.WriteLine($"❌ [Seed] Error during DB initialization: {ex.Message}");
         if (ex.InnerException != null)
         {
             Console.WriteLine($"🔍 [Seed] Inner Error: {ex.InnerException.Message}");
@@ -261,6 +300,118 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Create enums if they don't exist
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            DO $$ BEGIN
+                CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE user_status AS ENUM ('active', 'inactive', 'banned');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE gender_type AS ENUM ('male', 'female', 'other');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE shop_status AS ENUM ('pending', 'active', 'inactive', 'suspended');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            -- Ensure 'pending' value exists in shop_status enum (for existing databases)
+            DO $$ BEGIN
+                ALTER TYPE shop_status ADD VALUE IF NOT EXISTS 'pending' BEFORE 'active';
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE shop_type AS ENUM ('individual', 'business');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE product_status AS ENUM ('active', 'inactive', 'out_of_stock');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            -- Ensure 'deleted' value exists in product_status enum
+            DO $$ BEGIN
+                ALTER TYPE product_status ADD VALUE IF NOT EXISTS 'deleted';
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE category_status AS ENUM ('active', 'inactive');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'refunded');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE voucher_discount_type AS ENUM ('percentage', 'fixed');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            DO $$ BEGIN
+                CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'product');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+
+            ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS password_reset_code_expires TIMESTAMP;
+
+            ALTER TABLE user_addresses
+                ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+                ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+                ADD COLUMN IF NOT EXISTS poi_name VARCHAR(200),
+                ADD COLUMN IF NOT EXISTS formatted_address VARCHAR(500);
+
+            ALTER TABLE shops
+                ADD COLUMN IF NOT EXISTS pickup_address VARCHAR(500),
+                ADD COLUMN IF NOT EXISTS type shop_type DEFAULT 'individual';
+        ");
+
+        // Reload Npgsql types cache because new custom enums were created in this connection
+        if (db.Database.GetDbConnection() is Npgsql.NpgsqlConnection npgsqlConn)
+        {
+            if (npgsqlConn.State != System.Data.ConnectionState.Open)
+            {
+                npgsqlConn.Open();
+            }
+            npgsqlConn.ReloadTypes();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ [Init] Failed to run schema raw SQL updates: {ex.Message}");
+    }
     db.Database.ExecuteSqlRaw(@"
         DO $$ BEGIN
             CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
@@ -478,20 +629,27 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Ensure shops table has required columns
-    db.Database.ExecuteSqlRaw(@"
-        DO $$ 
-        BEGIN 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='business_hours') THEN
-                ALTER TABLE shops ADD COLUMN business_hours VARCHAR(200);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='pickup_address') THEN
-                ALTER TABLE shops ADD COLUMN pickup_address VARCHAR(500);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='type') THEN
-                ALTER TABLE shops ADD COLUMN type VARCHAR(20) DEFAULT 'individual';
-            END IF;
-        END $$;
-    ");
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='business_hours') THEN
+                    ALTER TABLE shops ADD COLUMN business_hours VARCHAR(200);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='pickup_address') THEN
+                    ALTER TABLE shops ADD COLUMN pickup_address VARCHAR(500);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='shops' AND column_name='type') THEN
+                    ALTER TABLE shops ADD COLUMN type VARCHAR(20) DEFAULT 'individual';
+                END IF;
+            END $$;
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ [Init] Failed to run shops schema updates: {ex.Message}");
+    }
 
     // Seed a default shop for the seller account if missing
     try
@@ -526,36 +684,85 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Create wishlist tables if they don't exist
-    db.Database.ExecuteSqlRaw(@"
-        CREATE TABLE IF NOT EXISTS favorites (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(user_id, product_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, created_at DESC);
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS favorites (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, product_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, created_at DESC);
 
-        CREATE TABLE IF NOT EXISTS wishlist_collections (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            name VARCHAR(100) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE INDEX IF NOT EXISTS idx_wishlist_collections_user ON wishlist_collections(user_id);
+            CREATE TABLE IF NOT EXISTS wishlist_collections (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name VARCHAR(100) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_wishlist_collections_user ON wishlist_collections(user_id);
 
-        CREATE TABLE IF NOT EXISTS wishlist_collection_items (
-            id BIGSERIAL PRIMARY KEY,
-            collection_id BIGINT NOT NULL REFERENCES wishlist_collections(id) ON DELETE CASCADE,
-            product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(collection_id, product_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_wishlist_collection_items_collection ON wishlist_collection_items(collection_id);
-    ");
+            CREATE TABLE IF NOT EXISTS wishlist_collection_items (
+                id BIGSERIAL PRIMARY KEY,
+                collection_id BIGINT NOT NULL REFERENCES wishlist_collections(id) ON DELETE CASCADE,
+                product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(collection_id, product_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_wishlist_collection_items_collection ON wishlist_collection_items(collection_id);
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ [Init] Failed to create wishlist tables: {ex.Message}");
+    }
 
     // Create wallet tables if they don't exist
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS wallets (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS wallet_transactions (
+                id BIGSERIAL PRIMARY KEY,
+                wallet_id BIGINT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+                amount DECIMAL(15,2) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                description VARCHAR(255),
+                order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet ON wallet_transactions(wallet_id);
+
+            CREATE TABLE IF NOT EXISTS return_requests (
+                id BIGSERIAL PRIMARY KEY,
+                order_id BIGINT NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+                buyer_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                reason VARCHAR(100) NOT NULL,
+                description VARCHAR(2000),
+                evidence_urls JSONB,
+                status INTEGER NOT NULL DEFAULT 0,
+                seller_note VARCHAR(1000),
+                refund_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_return_requests_order ON return_requests(order_id);
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ [Init] Failed to create wallet/return tables: {ex.Message}");
+    }
     db.Database.ExecuteSqlRaw(@"
         CREATE TABLE IF NOT EXISTS wallets (
             id BIGSERIAL PRIMARY KEY,

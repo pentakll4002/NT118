@@ -18,6 +18,7 @@ import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
 import Banner from '../common/Banner';
 import SearchDetail from '../screen/SearchDetail';
+import VoiceAssistantModal from '../common/VoiceAssistantModal';
 import SectionHeader from '../common/SectionHeader';
 import ProductCard, { Product } from '../common/ProductCard';
 import WishlistBanner from '../common/WishlistBanner';
@@ -52,6 +53,7 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isVoiceVisible, setIsVoiceVisible] = useState(false);
   
   // Pagination for suggested products
   const [page, setPage] = useState(1);
@@ -95,9 +97,9 @@ const HomePage = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [profile, featured, newest, suggested, favs, cats] = await Promise.all([
+      const [profile, flashSale, newest, suggested, favs, cats] = await Promise.all([
         userApi.getProfile().catch(() => null),
-        getFeaturedProducts(6),
+        getProducts({ page: 1, pageSize: 6, isFlashSale: true }),
         getProducts({ page: 1, pageSize: 6, sort: 'newest' }),
         getProducts({ page: 1, pageSize: 6, sort: 'popular' }),
         import('../../lib/wishlistApi').then(m => m.getFavorites().catch(() => ({ data: [] } as any))),
@@ -105,7 +107,8 @@ const HomePage = () => {
       ]);
 
       if (profile) setUser(profile);
-      setFeaturedProducts(featured.map(toCardProduct));
+      const flashSaleData = flashSale.data.length > 0 ? flashSale.data : suggested.data;
+      setFeaturedProducts(flashSaleData.map(toCardProduct));
       setNewestProducts(newest.data.map(toCardProduct));
       setSuggestedProducts(suggested.data.map(toCardProduct));
       setApiCategories(cats);
@@ -267,6 +270,7 @@ const HomePage = () => {
           <SearchBar
             placeholder="Tìm kiếm sản phẩm, thương hiệu..."
             onPress={() => setIsSearchVisible(true)}
+            onVoicePress={() => setIsVoiceVisible(true)}
           />
         </View>
 
@@ -409,6 +413,11 @@ const HomePage = () => {
       <SearchDetail
         visible={isSearchVisible}
         onClose={() => setIsSearchVisible(false)}
+      />
+
+      <VoiceAssistantModal
+        visible={isVoiceVisible}
+        onClose={() => setIsVoiceVisible(false)}
       />
     </SafeAreaView>
   );

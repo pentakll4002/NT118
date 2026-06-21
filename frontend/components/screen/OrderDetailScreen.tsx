@@ -13,6 +13,9 @@ import {
   formatPriceFull 
 } from '../../lib/orderApi';
 import * as Haptics from 'expo-haptics';
+import Map from './Map';
+import LiveTrackingMap from './LiveTrackingMap';
+import { useSignalREventListener } from '../../lib/notificationApi';
 
 const SC: Record<string, string> = { 
   pending: '#F59E0B', 
@@ -59,6 +62,13 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
   useEffect(() => {
     fetchOrder();
   }, [orderId]);
+
+  // Auto reload when order status changes in real-time
+  useSignalREventListener<{ orderId: number; status: string }>('order.status_changed', (data) => {
+    if (data.orderId === orderId) {
+      fetchOrder();
+    }
+  });
 
   const handleCancelOrder = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -156,7 +166,7 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
     );
   }
 
-  const { order, items } = data;
+  const { order, items, shippingAddress, shopLatitude, shopLongitude } = data;
   const statusLower = order.status.toLowerCase();
   const sc = SC[statusLower] || '#64748B';
   const pc = PC[order.paymentStatus.toLowerCase()] || '#64748B';
@@ -196,6 +206,50 @@ export default function OrderDetailScreen({ orderId }: { orderId: number }) {
             Ngày đặt hàng: {new Date(order.orderedAt).toLocaleString('vi-VN')}
           </Text>
         </View>
+
+        {/* Shipping Address & Map */}
+        {shippingAddress && (
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+              <Ionicons name="location-sharp" size={18} color="#EE4D2D" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B' }}>
+                Địa chỉ nhận hàng
+              </Text>
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E293B' }}>
+              {shippingAddress.recipientName} ({shippingAddress.recipientPhone})
+            </Text>
+            <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4, lineHeight: 18 }}>
+              {[
+                shippingAddress.streetAddress,
+                shippingAddress.ward,
+                shippingAddress.district,
+                shippingAddress.province
+              ].filter(Boolean).join(', ')}
+            </Text>
+            
+            {shippingAddress.latitude && shippingAddress.longitude && (
+              <View style={{ marginTop: 12 }}>
+                {statusLower === 'shipping' ? (
+                  <LiveTrackingMap 
+                    orderId={order.id} 
+                    customerLat={shippingAddress.latitude} 
+                    customerLng={shippingAddress.longitude} 
+                    shopLat={shopLatitude}
+                    shopLng={shopLongitude}
+                  />
+                ) : (
+                  <Map 
+                    latitude={shippingAddress.latitude} 
+                    longitude={shippingAddress.longitude} 
+                    title={shippingAddress.poiName || "Vị trí giao hàng"}
+                    description={shippingAddress.formattedAddress || "Địa chỉ nhận hàng"}
+                  />
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Payment details */}
         <View style={s.card}>

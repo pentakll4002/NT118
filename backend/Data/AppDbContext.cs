@@ -155,8 +155,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
             e.Property(x => x.BusinessHours).HasColumnName("business_hours").HasMaxLength(200);
             e.Property(x => x.PickupAddress).HasColumnName("pickup_address").HasMaxLength(500);
-            e.Property(x => x.Type).HasColumnName("type").HasMaxLength(20)
-                .HasConversion(v => v.ToString(), v => Enum.Parse<ShopType>(v));
+            e.Property(x => x.Type).HasColumnName("type");
             e.Property(x => x.Rating).HasColumnName("rating").HasPrecision(3, 2);
             e.Property(x => x.TotalReviews).HasColumnName("total_reviews");
             e.Property(x => x.TotalProducts).HasColumnName("total_products");

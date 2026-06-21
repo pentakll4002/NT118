@@ -21,7 +21,7 @@ public class SearchController(IProductService products) : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = new ProductQuery(q, categoryId, null, minPrice, maxPrice, brand, sort, page, pageSize);
+        var query = new ProductQuery(q, categoryId, null, minPrice, maxPrice, brand, sort, null, page, pageSize);
         return Ok(await products.SearchProductsAsync(query, cancellationToken));
     }
 }

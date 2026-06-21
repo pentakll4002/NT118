@@ -37,33 +37,44 @@ export async function cleanupInvalidNotifications(): Promise<number> {
 
 // ── SignalR singleton ────────────────────────────────────────────────
 let sharedConnection: signalR.HubConnection | null = null;
+let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
 let connectionRefCount = 0;
 const listeners: Set<(n: BackendNotification) => void> = new Set();
 
-async function ensureConnection() {
-  if (sharedConnection) return;
+async function ensureConnection(): Promise<signalR.HubConnection | null> {
+  if (sharedConnection) return sharedConnection;
+  if (connectionPromise) return connectionPromise;
 
-  const token = await getAuthToken();
-  if (!token) return;
+  connectionPromise = (async () => {
+    const token = await getAuthToken();
+    if (!token) {
+      connectionPromise = null;
+      return null;
+    }
 
-  const conn = new signalR.HubConnectionBuilder()
-    .withUrl(`${API_BASE_URL}/hubs/notifications`, {
-      accessTokenFactory: () => token,
-    })
-    .configureLogging(signalR.LogLevel.None)
-    .withAutomaticReconnect()
-    .build();
+    const conn = new signalR.HubConnectionBuilder()
+      .withUrl(`${API_BASE_URL}/hubs/notifications`, {
+        accessTokenFactory: () => token,
+      })
+      .configureLogging(signalR.LogLevel.None)
+      .withAutomaticReconnect()
+      .build();
 
-  conn.on('notification.created', (n: BackendNotification) => {
-    listeners.forEach((cb) => cb(n));
-  });
+    conn.on('notification.created', (n: BackendNotification) => {
+      listeners.forEach((cb) => cb(n));
+    });
 
-  try {
-    await conn.start();
-    sharedConnection = conn;
-  } catch {
-    // silent — will auto-reconnect
-  }
+    try {
+      await conn.start();
+      sharedConnection = conn;
+      return conn;
+    } catch {
+      connectionPromise = null;
+      return null;
+    }
+  })();
+
+  return connectionPromise;
 }
 
 async function releaseConnection() {
@@ -71,6 +82,7 @@ async function releaseConnection() {
     await sharedConnection.stop();
     sharedConnection = null;
   }
+  connectionPromise = null;
 }
 
 export function useNotificationSignalR(onNotification?: (n: BackendNotification) => void) {
@@ -174,4 +186,31 @@ export function useNotifications() {
     markRead,
     markAllRead,
   };
+}
+
+export function useSignalREventListener<T>(eventName: string, callback: (data: T) => void) {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  useEffect(() => {
+    let isMounted = true;
+    const cb = (data: T) => {
+      if (isMounted) callbackRef.current?.(data);
+    };
+
+    const register = async () => {
+      await ensureConnection();
+      if (!isMounted || !sharedConnection) return;
+      sharedConnection.on(eventName, cb);
+    };
+
+    register();
+
+    return () => {
+      isMounted = false;
+      if (sharedConnection) {
+        sharedConnection.off(eventName, cb);
+      }
+    };
+  }, [eventName]);
 }

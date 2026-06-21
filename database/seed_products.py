@@ -289,8 +289,8 @@ def ensure_seller_and_shop(cur) -> int:
     else:
         cur.execute(
             """
-            INSERT INTO users (username, email, password_hash, created_at, updated_at)
-            VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO users (username, email, password_hash, role, status, created_at, updated_at)
+            VALUES (%s, %s, %s, 'seller'::user_role, 'active'::user_status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id;
             """,
             (

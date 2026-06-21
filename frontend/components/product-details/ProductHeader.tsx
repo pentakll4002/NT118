@@ -8,9 +8,10 @@ interface ProductHeaderProps {
   productName: string;
   productPrice: number;
   cartCount: number;
+  onVoicePress?: () => void;
 }
 
-const ProductHeader: React.FC<ProductHeaderProps> = ({ productName, productPrice, cartCount }) => {
+const ProductHeader: React.FC<ProductHeaderProps> = ({ productName, productPrice, cartCount, onVoicePress }) => {
   const router = useRouter();
 
   return (
@@ -36,6 +37,12 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ productName, productPrice
         >
           <Ionicons name="share-social-outline" size={24} color="#F83758" />
         </TouchableOpacity>
+
+        {onVoicePress && (
+          <TouchableOpacity style={styles.iconButton} onPress={onVoicePress}>
+            <Ionicons name="mic-outline" size={24} color="#F83758" />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(tabs)/cart')}>
           <Ionicons name="cart-outline" size={24} color="#F83758" />

@@ -18,6 +18,8 @@ import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
 import { sellerApi, ShopProfile } from '@/lib/sellerApi';
 import { Colors } from '@/constants/theme';
+import Map from '@/components/screen/Map';
+import { forwardGeocodeNominatim } from '@/lib/geocode';
 
 const ShopProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -25,9 +27,44 @@ const ShopProfileScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Partial<ShopProfile>>({});
 
+  const [coordSource, setCoordSource] = useState<'auto' | 'manual'>('manual');
+  const fwdAbortRef = React.useRef<AbortController | null>(null);
+  const fwdDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     fetchShopInfo();
   }, []);
+
+  // Auto geocode when address changes
+  useEffect(() => {
+    if (coordSource !== 'auto') return;
+    if (!profile.address || profile.address.trim().length < 5) return;
+
+    fwdAbortRef.current?.abort();
+    const controller = new AbortController();
+    fwdAbortRef.current = controller;
+
+    if (fwdDebounceRef.current) clearTimeout(fwdDebounceRef.current);
+    fwdDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await forwardGeocodeNominatim(profile.address!, { signal: controller.signal });
+        if (res && coordSource === 'auto') {
+          setProfile((prev) => ({
+            ...prev,
+            latitude: res.latitude,
+            longitude: res.longitude
+          }));
+        }
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return;
+      }
+    }, 850);
+
+    return () => {
+      controller.abort();
+      if (fwdDebounceRef.current) clearTimeout(fwdDebounceRef.current);
+    };
+  }, [profile.address, coordSource]);
 
   const fetchShopInfo = async () => {
     try {
@@ -47,7 +84,7 @@ const ShopProfileScreen: React.FC = () => {
       setSaving(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      await sellerApi.updateShopProfile({
+      const res = await sellerApi.updateShopProfile({
         name: profile.name,
         description: profile.description,
         address: profile.address,
@@ -55,10 +92,12 @@ const ShopProfileScreen: React.FC = () => {
         email: profile.email,
         businessHours: profile.businessHours,
         pickupAddress: profile.pickupAddress,
+        latitude: profile.latitude,
+        longitude: profile.longitude,
       });
       
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Thành công', 'Đã cập nhật thông tin cửa hàng');
+      Alert.alert('Thông báo', res.message || 'Đã cập nhật thông tin cửa hàng');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể lưu thay đổi');
@@ -204,10 +243,32 @@ const ShopProfileScreen: React.FC = () => {
               </View>
               <TextInput
                 value={profile.address}
-                onChangeText={(text) => setProfile((prev) => ({ ...prev, address: text }))}
+                onChangeText={(text) => {
+                  setProfile((prev) => ({ ...prev, address: text }));
+                  setCoordSource('auto');
+                }}
                 style={styles.textInput}
                 placeholder="Địa chỉ hiển thị trên shop"
                 placeholderTextColor="#A29DBA"
+              />
+            </View>
+
+            <View style={styles.mapWrap}>
+              <Text style={styles.mapHint}>Chạm vào bản đồ để chọn chính xác vị trí cửa hàng.</Text>
+              <Map
+                latitude={profile.latitude || 10.7712}
+                longitude={profile.longitude || 106.6979}
+                interactive
+                onCoordinateChange={(c) => {
+                  setCoordSource('manual');
+                  setProfile((prev) => ({
+                    ...prev,
+                    latitude: c.latitude,
+                    longitude: c.longitude
+                  }));
+                }}
+                title="Vị trí cửa hàng"
+                description={profile.address || "Địa chỉ shop"}
               />
             </View>
 
@@ -504,6 +565,18 @@ const styles = StyleSheet.create({
     color: '#B45309',
     marginTop: 2,
     lineHeight: 18,
+    fontWeight: '500',
+  },
+  mapWrap: {
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mapHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 8,
     fontWeight: '500',
   },
 });

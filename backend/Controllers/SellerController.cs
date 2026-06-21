@@ -11,7 +11,7 @@ namespace Backend.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/seller")]
-public class SellerController(AppDbContext db, INotificationRealtimeService notificationService) : ControllerBase
+public class SellerController(AppDbContext db, INotificationRealtimeService notificationService, IShipperTrackingSimulator trackingSimulator) : ControllerBase
 {
     [HttpGet("dashboard")]
     public async Task<ActionResult<SellerDashboardStats>> GetDashboardStats(CancellationToken cancellationToken)
@@ -33,8 +33,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                     Slug = $"shop-{userId}-{Guid.NewGuid().ToString()[..8]}",
                     Status = ShopStatus.active,
                     IsVerified = true,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
                 db.Shops.Add(shop);
                 await db.SaveChangesAsync(cancellationToken);
@@ -349,8 +349,6 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         return Ok(new { message = "Thêm sản phẩm thành công.", product.Id });
     }
 
-
-
     [HttpGet("orders")]
     public async Task<ActionResult<IReadOnlyList<object>>> GetSellerOrders(CancellationToken cancellationToken)
     {
@@ -497,8 +495,14 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
         if (!validTransitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(body.Status))
             return BadRequest(new { message = $"Không thể chuyển trạng thái từ '{order.Status}' sang '{body.Status}'." });
 
+        var oldStatus = order.Status;
         order.Status = body.Status;
         order.UpdatedAt = DateTime.UtcNow;
+
+        if (body.Status == OrderStatus.shipping && oldStatus != OrderStatus.shipping)
+        {
+            trackingSimulator.StartTrackingSimulation(order.Id);
+        }
 
         // Create notification for the buyer
         var statusLabels = new Dictionary<OrderStatus, string>

@@ -11,7 +11,8 @@ DROP TYPE IF EXISTS user_role CASCADE;
 
 CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
 CREATE TYPE user_status AS ENUM ('active', 'inactive', 'banned');
-CREATE TYPE shop_status AS ENUM ('active', 'inactive', 'suspended');
+CREATE TYPE shop_status AS ENUM ('pending', 'active', 'inactive', 'suspended');
+CREATE TYPE shop_type AS ENUM ('individual', 'business');
 CREATE TYPE product_status AS ENUM ('active', 'inactive', 'out_of_stock');
 CREATE TYPE category_status AS ENUM ('active', 'inactive');
 CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'refunded');
@@ -142,7 +143,7 @@ CREATE TABLE IF NOT EXISTS shops (
   total_reviews INTEGER DEFAULT 0,
   total_products INTEGER DEFAULT 0,
   status shop_status DEFAULT 'active',
-  type VARCHAR(20) DEFAULT 'individual',
+  type shop_type DEFAULT 'individual',
   is_verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -117,3 +117,36 @@ export async function aiParseSearch(query: string): Promise<AIParsedSearch> {
     return { extracted_query: query, category: null, color: null, max_price: null, min_price: null, brand: null, specs: [] };
   }
 }
+
+export type VoiceParsedResponse = {
+  text: string;
+  action: 'SEARCH' | 'NAVIGATE' | 'ADD_TO_CART' | 'FAVORITE' | 'UNKNOWN';
+  params: Record<string, any>;
+  response_message: string;
+};
+
+export async function parseVoiceText(text: string): Promise<VoiceParsedResponse> {
+  const { data } = await chatbotClient.post<VoiceParsedResponse>('/api/voice/parse-text', { text });
+  return data;
+}
+
+export async function parseVoiceAudio(audioUri: string): Promise<VoiceParsedResponse> {
+  const formData = new FormData();
+  
+  const uriParts = audioUri.split('.');
+  const fileType = uriParts[uriParts.length - 1] || 'm4a';
+  
+  formData.append('file', {
+    uri: Platform.OS === 'android' ? audioUri : audioUri.replace('file://', ''),
+    name: `voice.${fileType}`,
+    type: `audio/${fileType}`,
+  } as any);
+
+  const { data } = await chatbotClient.post<VoiceParsedResponse>('/api/voice/parse-audio', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return data;
+}
+

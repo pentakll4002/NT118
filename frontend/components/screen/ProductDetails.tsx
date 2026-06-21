@@ -15,6 +15,7 @@ import { getMyOrders, getOrderDetail } from '../../lib/orderApi';
 // Components
 import ProductCard, { Product } from '../common/ProductCard';
 import ShopVoucherModal from '../common/ShopVoucherModal';
+import VoiceAssistantModal from '../common/VoiceAssistantModal';
 import Skeleton from '../common/Skeleton';
 
 // Sub-components
@@ -56,6 +57,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
   const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>(undefined);
   const [modalMode, setModalMode] = useState<'cart' | 'buy'>('cart');
   const [showShopVoucherModal, setShowShopVoucherModal] = useState(false);
+  const [isVoiceVisible, setIsVoiceVisible] = useState(false);
 
   // Refresh data whenever the screen comes into focus
   useFocusEffect(
@@ -181,6 +183,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
         productName={product.name} 
         productPrice={product.price} 
         cartCount={cartCount} 
+        onVoicePress={() => setIsVoiceVisible(true)}
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -259,6 +262,14 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ productId = 1 }) => {
         visible={showShopVoucherModal}
         onClose={() => setShowShopVoucherModal(false)}
         shopId={product.shopId}
+      />
+
+      <VoiceAssistantModal 
+        visible={isVoiceVisible} 
+        onClose={() => setIsVoiceVisible(false)} 
+        currentProductId={productId}
+        onAddToCart={async () => handleAddToCart()}
+        onAddToWishlist={async () => handleToggleFavorite()}
       />
     </SafeAreaView>
   );

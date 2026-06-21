@@ -2,19 +2,22 @@ import React from 'react';
 import { Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 interface SellerOrdersHeaderProps {
-  onBackPress: () => void;
+  onBackPress?: () => void;
 }
 
 const SellerOrdersHeader: React.FC<SellerOrdersHeaderProps> = ({ onBackPress }) => {
+  const router = useRouter();
+  const handleBack = onBackPress ?? (() => router.back());
   const insets = useSafeAreaInsets();
   const androidTopInset = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
 
   return (
     <View style={[styles.header, { paddingTop: Math.max(insets.top, androidTopInset) + 6 }]}>
       <View style={styles.headerTop}>
-        <TouchableOpacity onPress={onBackPress} style={styles.iconButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
           <Ionicons name="chevron-back" size={22} color="#2c3e50" />
         </TouchableOpacity>
         <Text style={styles.brand}>ShopeeLite Seller</Text>

@@ -11,6 +11,7 @@ interface CustomSearchHeaderProps {
   onBackPress?: () => void;
   autoFocus?: boolean;
   onAIPress?: () => void;
+  onVoicePress?: () => void;
 }
 
 const CustomSearchHeader: React.FC<CustomSearchHeaderProps> = ({
@@ -20,7 +21,8 @@ const CustomSearchHeader: React.FC<CustomSearchHeaderProps> = ({
   onSubmitEditing,
   onBackPress,
   autoFocus = true,
-  onAIPress
+  onAIPress,
+  onVoicePress
 }) => {
   const router = useRouter();
 
@@ -52,6 +54,11 @@ const CustomSearchHeader: React.FC<CustomSearchHeaderProps> = ({
         <TouchableOpacity style={styles.cameraIcon} onPress={onAIPress}>
           <Ionicons name="sparkles" size={20} color="#F73658" />
         </TouchableOpacity>
+        {onVoicePress && (
+          <TouchableOpacity style={styles.micIcon} onPress={onVoicePress}>
+            <Ionicons name="mic" size={20} color="#F73658" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.searchButton} onPress={onSubmitEditing}>
           <Ionicons name="search" size={16} color="white" />
         </TouchableOpacity>
@@ -95,6 +102,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat_400Regular',
   },
   cameraIcon: {
+    paddingHorizontal: 8,
+  },
+  micIcon: {
     paddingHorizontal: 8,
   },
   searchButton: {
