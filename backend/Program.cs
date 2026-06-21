@@ -412,10 +412,106 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine($"⚠️ [Init] Failed to run schema raw SQL updates: {ex.Message}");
     }
+    db.Database.ExecuteSqlRaw(@"
+        DO $$ BEGIN
+            CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
 
-    // Apply pending migrations only if the database is already managed by EF migrations.
-    // If the DB was created from init.sql (no __EFMigrationsHistory), running Migrate() can fail
-    // with PendingModelChangesWarning.
+        DO $$ BEGIN
+            CREATE TYPE user_status AS ENUM ('active', 'inactive', 'banned');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE gender_type AS ENUM ('male', 'female', 'other');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE shop_status AS ENUM ('pending', 'active', 'inactive', 'suspended');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        -- Ensure 'pending' value exists in shop_status enum (for existing databases)
+        DO $$ BEGIN
+            ALTER TYPE shop_status ADD VALUE IF NOT EXISTS 'pending' BEFORE 'active';
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE shop_type AS ENUM ('individual', 'business');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE product_status AS ENUM ('active', 'inactive', 'out_of_stock');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        -- Ensure 'deleted' value exists in product_status enum
+        DO $$ BEGIN
+            ALTER TYPE product_status ADD VALUE IF NOT EXISTS 'deleted';
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE category_status AS ENUM ('active', 'inactive');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'refunded');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE voucher_discount_type AS ENUM ('percentage', 'fixed');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        DO $$ BEGIN
+            CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'product');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS password_reset_code_expires TIMESTAMP;
+
+        ALTER TABLE user_addresses
+            ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+            ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+            ADD COLUMN IF NOT EXISTS poi_name VARCHAR(200),
+            ADD COLUMN IF NOT EXISTS formatted_address VARCHAR(500);
+
+        ALTER TABLE shops
+            ADD COLUMN IF NOT EXISTS pickup_address VARCHAR(500),
+            ADD COLUMN IF NOT EXISTS type shop_type DEFAULT 'individual';
+
+        ALTER TABLE wallets
+            ADD COLUMN IF NOT EXISTS coin_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00;
+    ");
+
+    
     try
     {
         var hasHistory = db.Database.SqlQueryRaw<bool>("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '__EFMigrationsHistory')").AsEnumerable().FirstOrDefault();
@@ -667,6 +763,59 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine($"⚠️ [Init] Failed to create wallet/return tables: {ex.Message}");
     }
+    db.Database.ExecuteSqlRaw(@"
+        CREATE TABLE IF NOT EXISTS wallets (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+            coin_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS wallet_transactions (
+            id BIGSERIAL PRIMARY KEY,
+            wallet_id BIGINT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+            amount DECIMAL(15,2) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            description VARCHAR(255),
+            order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet ON wallet_transactions(wallet_id);
+
+        CREATE TABLE IF NOT EXISTS lucky_wheel_accounts (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            free_spins INTEGER NOT NULL DEFAULT 0,
+            last_daily_claim_date TIMESTAMP,
+            last_slot1_claim_date TIMESTAMP,
+            last_slot2_claim_date TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS missions (
+            id BIGSERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description VARCHAR(1000),
+            type INTEGER NOT NULL,
+            reward_xu INTEGER NOT NULL DEFAULT 0,
+            is_daily BOOLEAN NOT NULL DEFAULT FALSE,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS user_missions (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            mission_id BIGINT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+            status VARCHAR(50) NOT NULL DEFAULT 'todo',
+            claimed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_missions_user ON user_missions(user_id);
+    ");
 }
 
 app.UseStaticFiles();

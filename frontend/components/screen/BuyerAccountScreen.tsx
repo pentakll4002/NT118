@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { clearAuthToken } from '../../lib/authToken';
 
@@ -16,6 +16,7 @@ const BuyerAccountScreen: React.FC = () => {
   const [profile, setProfile] = React.useState<UserProfileDTO | null>(null);
   const [orderStats, setOrderStats] = React.useState<OrderStat[]>([]);
   const [balance, setBalance] = React.useState<number | null>(null);
+  const [coinBalance, setCoinBalance] = React.useState<number | null>(null);
 
   const fetchData = async () => {
     try {
@@ -28,6 +29,7 @@ const BuyerAccountScreen: React.FC = () => {
       const wallet = await getWallet().catch(() => null);
       if (wallet) {
         setBalance(wallet.balance);
+        setCoinBalance(wallet.coinBalance);
       }
     } catch (error) {
       console.error('Failed to fetch account data:', error);
@@ -107,16 +109,32 @@ const BuyerAccountScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
           <View style={styles.walletDivider} />
-          <TouchableOpacity style={styles.walletItem} activeOpacity={0.7} onPress={() => router.push('/wallet' as any)}>
-            <Ionicons name="gift-outline" size={20} color="#FFB000" />
+          <TouchableOpacity style={styles.walletItem} activeOpacity={0.7} onPress={() => router.push('/missions' as any)}>
+            <FontAwesome5 name="coins" size={18} color="#FFB000" />
             <View style={styles.walletTextContainer}>
               <Text style={styles.walletLabel}>Shopee Xu</Text>
               <Text style={styles.walletValue}>
-                {balance !== null ? `${balance.toLocaleString('vi-VN')} xu` : 'Đang tải...'}
+                {coinBalance !== null ? `${coinBalance.toLocaleString('vi-VN')} xu` : 'Đang tải...'}
               </Text>
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Lucky Wheel Banner */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/lucky-wheel' as any)}
+          style={styles.luckyWheelBanner}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 26, marginRight: 10 }}>🎡</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Vòng Quay May Mắn</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>Quay miễn phí mỗi ngày · Trúng đến 50.000 xu!</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -454,6 +472,19 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: '#e2e8f0',
+  },
+  luckyWheelBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#EE4D2D',
+    elevation: 3,
+    shadowColor: '#EE4D2D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });
 

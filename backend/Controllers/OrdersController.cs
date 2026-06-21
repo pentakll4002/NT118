@@ -246,10 +246,40 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
 
         var now = DateTime.UtcNow;
         var totalAmount = subtotal + shippingFee - discount;
+
+        // ── Coin (Xu) Discount ──────────────────────────────────────────
+        decimal appliedCoinDiscount = 0m;
+        Wallet? coinWallet = null;
+        if (body.CoinDiscount > 0)
+        {
+            coinWallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (coinWallet == null || coinWallet.Balance < body.CoinDiscount)
+            {
+                return BadRequest(new { message = "Số xu không đủ để áp dụng giảm giá." });
+            }
+
+            // Cannot discount more than the order total
+            appliedCoinDiscount = Math.Min(body.CoinDiscount, totalAmount);
+            totalAmount -= appliedCoinDiscount;
+
+            coinWallet.Balance -= appliedCoinDiscount;
+            coinWallet.UpdatedAt = DateTime.UtcNow;
+
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = coinWallet.Id,
+                Amount = -appliedCoinDiscount,
+                Type = "coin_discount",
+                Description = $"Dùng {appliedCoinDiscount:N0} xu giảm giá đơn hàng",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         Wallet? userWallet = null;
         if (body.PaymentMethod == "wallet")
         {
-            userWallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            // Re-use the wallet we already fetched for coin discount if same user
+            userWallet = coinWallet ?? await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
             if (userWallet == null)
             {
                 userWallet = new Wallet
@@ -279,7 +309,7 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
             ShopVoucherId = null,
             Subtotal = subtotal,
             ShippingFee = shippingFee,
-            DiscountAmount = discount,
+            DiscountAmount = discount + appliedCoinDiscount,
             TotalAmount = totalAmount,
             PaymentMethod = body.PaymentMethod,
             PaymentStatus = body.PaymentMethod == "wallet" ? PaymentStatus.paid : PaymentStatus.pending,
@@ -320,6 +350,19 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
                 UpdatedAt = DateTime.UtcNow,
             };
             db.Payments.Add(payment);
+
+            var rewardAmount = totalAmount >= 200000m ? 2000m : 1000m;
+            userWallet.Balance += rewardAmount;
+            
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = userWallet.Id,
+                Amount = rewardAmount,
+                Type = "reward",
+                Description = $"Thưởng xu thanh toán trước đơn hàng {order.OrderNumber}",
+                OrderId = order.Id,
+                CreatedAt = DateTime.UtcNow
+            });
         }
 
         // Now order.Id is populated by the database
@@ -352,7 +395,8 @@ public class OrdersController(AppDbContext db, INotificationRealtimeService noti
             notification.CreatedAt
         }, cancellationToken);
 
-        return Ok(new { message = "Đặt hàng thành công.", order.Id, order.OrderNumber, order.TotalAmount });
+        var returnedRewardAmount = body.PaymentMethod == "wallet" ? (totalAmount >= 200000m ? 2000m : 1000m) : 0m;
+        return Ok(new { message = "Đặt hàng thành công.", order.Id, order.OrderNumber, order.TotalAmount, rewardAmount = returnedRewardAmount });
     }
 
     [HttpPost("shipping-fee/estimate")]

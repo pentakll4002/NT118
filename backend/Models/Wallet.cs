@@ -14,6 +14,9 @@ public class Wallet
     [Column("balance")]
     public decimal Balance { get; set; }
 
+    [Column("coin_balance")]
+    public decimal CoinBalance { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 

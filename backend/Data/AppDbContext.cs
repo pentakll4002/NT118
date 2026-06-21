@@ -33,6 +33,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+    public DbSet<LuckyWheelAccount> LuckyWheelAccounts => Set<LuckyWheelAccount>();
+    public DbSet<Mission> Missions => Set<Mission>();
+    public DbSet<UserMission> UserMissions => Set<UserMission>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -477,6 +480,60 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Wallet)
                 .WithMany(x => x.Transactions)
                 .HasForeignKey(x => x.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<LuckyWheelAccount>(e =>
+        {
+            e.ToTable("lucky_wheel_accounts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            e.Property(x => x.FreeSpins).HasColumnName("free_spins");
+            e.Property(x => x.LastDailyClaimDate).HasColumnName("last_daily_claim_date");
+            e.Property(x => x.LastSlot1ClaimDate).HasColumnName("last_slot1_claim_date");
+            e.Property(x => x.LastSlot2ClaimDate).HasColumnName("last_slot2_claim_date");
+            e.HasIndex(x => x.UserId).IsUnique();
+
+            e.HasOne(x => x.User)
+                .WithOne()
+                .HasForeignKey<LuckyWheelAccount>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Mission>(e =>
+        {
+            e.ToTable("missions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Title).HasColumnName("title").HasMaxLength(255).IsRequired();
+            e.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
+            e.Property(x => x.Type).HasColumnName("type");
+            e.Property(x => x.RewardXu).HasColumnName("reward_xu");
+            e.Property(x => x.IsDaily).HasColumnName("is_daily");
+            e.Property(x => x.IsActive).HasColumnName("is_active");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<UserMission>(e =>
+        {
+            e.ToTable("user_missions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            e.Property(x => x.MissionId).HasColumnName("mission_id").IsRequired();
+            e.Property(x => x.Status).HasColumnName("status").HasMaxLength(50);
+            e.Property(x => x.ClaimedAt).HasColumnName("claimed_at");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Mission)
+                .WithMany()
+                .HasForeignKey(x => x.MissionId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

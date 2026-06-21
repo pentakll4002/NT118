@@ -34,9 +34,15 @@ const WriteReviewScreen = () => {
         comment
       });
 
-      Alert.alert('Thành công', 'Đánh giá của bạn đã được gửi!', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      if (result.rewardAmount > 0) {
+        Alert.alert('Thành công', `Đánh giá của bạn đã được gửi!\n\nChúc mừng bạn nhận được ${result.rewardAmount.toLocaleString('vi-VN')} xu thưởng vì đã đánh giá chi tiết!`, [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      } else {
+        Alert.alert('Thành công', 'Đánh giá của bạn đã được gửi!', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      }
     } catch (err: any) {
       Alert.alert('Lỗi', err.message || 'Đã xảy ra lỗi khi gửi đánh giá.');
     } finally {
@@ -87,13 +93,16 @@ const WriteReviewScreen = () => {
         <View style={styles.commentSection}>
           <TextInput
             style={styles.textInput}
-            placeholder="Hãy chia sẻ nhận xét của bạn về sản phẩm này nhé..."
+            placeholder="Hãy chia sẻ nhận xét của bạn về sản phẩm này nhé (tối thiểu 50 ký tự để nhận xu thưởng)..."
             multiline
             numberOfLines={10}
             textAlignVertical="top"
             value={comment}
             onChangeText={setComment}
           />
+          <Text style={{ fontSize: 12, color: comment.trim().length >= 50 ? '#10B981' : '#64748B', marginTop: 8 }}>
+            {comment.trim().length}/50 ký tự (Đánh giá từ 50 ký tự để nhận xu thưởng)
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import PaymentAddressSection, { UserAddressType } from '../common/PaymentAddressSection';
 import PaymentProductSection, { CheckoutCartItem } from '../common/PaymentProductSection';
 import PaymentShippingSection from '../common/PaymentShippingSection';
@@ -50,6 +50,8 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
   const [shippingFee, setShippingFee] = useState<number>(25000);
   const [shippingDistanceKm, setShippingDistanceKm] = useState<number | null>(null);
   const [isEstimatingShipping, setIsEstimatingShipping] = useState(false);
+  const [orderRewardAmount, setOrderRewardAmount] = useState<number>(0);
+  const [useCoin, setUseCoin] = useState(false);
 
   const fetchAddress = async () => {
     try {
@@ -205,6 +207,15 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
     finalTotal -= appliedVoucher.discount;
     finalSavings += appliedVoucher.discount;
   }
+  finalTotal = Math.max(0, finalTotal);
+
+  // Coin (Xu) discount: 1 xu = 1 VND
+  const availableCoins = walletBalance ?? 0;
+  const coinDiscount = useCoin ? Math.min(availableCoins, finalTotal) : 0;
+  if (coinDiscount > 0) {
+    finalTotal -= coinDiscount;
+    finalSavings += coinDiscount;
+  }
   finalTotal = Math.max(0, finalTotal); // Ensure total doesn't go negative
 
   useEffect(() => {
@@ -274,6 +285,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
       const payload = {
         shippingAddressId: selectedAddress.id,
         paymentMethod: paymentMethod,
+        coinDiscount: coinDiscount,
         items: cartItems.map((x) => ({
           productId: x.productId,
           variantId: x.variantId,
@@ -285,6 +297,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
       const orderData = orderRes.data?.data || orderRes.data;
       const realOrderId = orderData.id || orderData.Id || 1;
       const realTotalAmount = orderData.totalAmount || orderData.TotalAmount || finalTotal;
+      setOrderRewardAmount(orderData.rewardAmount || 0);
 
       if (message.trim() && cartItems.length > 0) {
         // Try to send message to shop
@@ -373,6 +386,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
         cartItems={cartItems}
         finalTotal={finalTotal}
         paymentUrl={paymentUrl}
+        rewardAmount={orderRewardAmount}
       />
     );
   }
@@ -454,6 +468,41 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             appliedVoucher={appliedVoucher || undefined}
           />
 
+          {/* Coin (Xu) Discount Section */}
+          <View style={styles.sectionBlock}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <FontAwesome5 name="coins" size={18} color="#FF9100" style={{ marginRight: 8 }} />
+                <View>
+                  <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Shopee Xu</Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                    Bạn có {availableCoins.toLocaleString('vi-VN')} xu {availableCoins > 0 ? `(-${Math.min(availableCoins, finalTotal + coinDiscount).toLocaleString('vi-VN')}đ)` : ''}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setUseCoin(!useCoin)}
+                disabled={availableCoins <= 0}
+                style={{ opacity: availableCoins <= 0 ? 0.4 : 1 }}
+              >
+                <View style={{
+                  width: 48, height: 28, borderRadius: 14,
+                  backgroundColor: useCoin ? '#EE4D2D' : '#E0E0E0',
+                  justifyContent: 'center',
+                  paddingHorizontal: 3,
+                }}>
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 11,
+                    backgroundColor: '#FFF',
+                    alignSelf: useCoin ? 'flex-end' : 'flex-start',
+                    elevation: 2,
+                    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1,
+                  }} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.sectionBlock}>
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>Tổng số tiền ({totalQuantity || 0} sản phẩm)</Text>
@@ -473,6 +522,7 @@ export default function PaymentPage({ onClose, totalAmount, productId, quantity,
             shippingDiscount={shippingDiscount}
             finalTotal={finalTotal}
             voucherDiscount={appliedVoucher?.discount}
+            coinDiscount={coinDiscount}
           />
 
           <View style={{ height: 100 }} />

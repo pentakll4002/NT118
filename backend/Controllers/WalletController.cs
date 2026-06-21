@@ -38,9 +38,23 @@ public class WalletController(AppDbContext db) : ControllerBase
             wallet.Id,
             wallet.UserId,
             wallet.Balance,
+            wallet.CoinBalance,
             wallet.CreatedAt,
             wallet.UpdatedAt
         });
+    }
+
+    [HttpGet("balance")]
+    public async Task<IActionResult> GetBalance(CancellationToken cancellationToken)
+    {
+        if (!this.TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var wallet = await db.Wallets
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+
+        return Ok(new { balance = wallet?.Balance ?? 0m, coinBalance = wallet?.CoinBalance ?? 0m });
     }
 
     [HttpGet("transactions")]
