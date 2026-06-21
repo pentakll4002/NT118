@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -176,12 +177,10 @@ export default function SearchScreen() {
           <SearchFilterBar onSortChange={handleSortChange} onFilterPress={() => {}} />
           <ActiveFilters tags={activeTags} onRemoveTag={removeTag} />
           
-          <FlatList
-            data={products}
+          <FlashList data={products}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             numColumns={2}
             contentContainerStyle={styles.listContainer}
-            columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}

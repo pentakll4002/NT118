@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getProductReviews, ReviewDto } from '../../lib/reviewApi';
@@ -120,8 +121,7 @@ const ReviewListScreen = () => {
           <ActivityIndicator size="large" color="#F83758" />
         </View>
       ) : (
-        <FlatList
-          data={filteredReviews}
+        <FlashList data={filteredReviews}
           renderItem={renderReviewItem}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContent}

@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomSearchHeader from '../components/common/CustomSearchHeader';
@@ -161,12 +162,10 @@ export default function SearchResultsScreen() {
             <Text style={styles.loadingText}>Đang tải kết quả...</Text>
           </View>
         ) : (
-          <FlatList
-            data={products}
+          <FlashList data={products}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             numColumns={2}
             contentContainerStyle={styles.listContainer}
-            columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
