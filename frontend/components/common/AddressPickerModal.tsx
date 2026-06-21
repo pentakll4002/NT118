@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../lib/apiClient';
 
@@ -189,8 +190,7 @@ export default function AddressPickerModal({ visible, onClose, onSelectComplete 
             <Text style={styles.emptySubtitle}>Vui lòng quay lại hoặc thử lại.</Text>
           </View>
         ) : (
-          <FlatList
-            data={items}
+          <FlashList data={items}
             keyExtractor={item => item.code}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.item} onPress={() => handleSelectItem(item)}>

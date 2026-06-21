@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProductDTO, formatPriceFull, ProductVariantDTO } from '../../lib/productApi';
 
@@ -58,7 +59,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           <View style={styles.modalHeader}>
             <Image
               source={
-                product.image
+                selectedVariant?.imageUrl
+                  ? { uri: selectedVariant.imageUrl }
+                  : product.image
                   ? { uri: product.image }
                   : product.thumbnails && product.thumbnails.length > 0
                   ? { uri: product.thumbnails[0] }
@@ -165,10 +168,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalProductImage: {
-    width: 100,
-    height: 100,
+    width: 130,
+    height: 130,
     borderRadius: 12,
-    marginTop: -40,
+    marginTop: -50,
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#EEE',
@@ -201,7 +204,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   selectionScroll: {
-    maxHeight: 400,
+    maxHeight: 500,
     paddingHorizontal: 20,
   },
   variantGroup: {

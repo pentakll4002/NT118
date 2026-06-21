@@ -1,5 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -15,8 +17,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({ images, activ
 
   return (
     <View style={styles.imageGallery}>
-      <FlatList
-        data={thumbnails}
+      <FlashList data={thumbnails}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}

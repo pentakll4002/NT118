@@ -1,17 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, Easing, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -241,7 +231,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const listRef = useRef<FlatList<ChatMessage>>(null);
+  const listRef = useRef<FlashList<ChatMessage>>(null);
 
   const sortedMessages = useMemo(() => messages, [messages]);
 
@@ -350,8 +340,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={8}
         >
-          <FlatList
-            ref={listRef}
+          <FlashList ref={listRef}
             data={sortedMessages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messageList}
