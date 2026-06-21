@@ -236,13 +236,20 @@ public class ProductService(AppDbContext db) : IProductService
         if (query.MaxPrice.HasValue)
             q = q.Where(x => x.Price <= query.MaxPrice.Value);
 
+        if (query.IsFlashSale == true)
+        {
+            q = q.Where(x => x.OriginalPrice.HasValue && x.OriginalPrice.Value > x.Price);
+        }
+
         q = query.Sort?.Trim().ToLower() switch
         {
             "price_asc" => q.OrderBy(x => x.Price).ThenByDescending(x => x.Id),
             "price_desc" => q.OrderByDescending(x => x.Price).ThenByDescending(x => x.Id),
             "rating" => q.OrderByDescending(x => x.Rating).ThenByDescending(x => x.TotalReviews),
             "sold" => q.OrderByDescending(x => x.SoldQuantity).ThenByDescending(x => x.Id),
-            _ => q.OrderByDescending(x => x.CreatedAt),
+            _ => query.IsFlashSale == true
+                ? q.OrderByDescending(x => (x.OriginalPrice ?? 0m) - x.Price)
+                : q.OrderByDescending(x => x.CreatedAt),
         };
 
         return q;
