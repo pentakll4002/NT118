@@ -1,14 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  TouchableOpacity,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { TabModel, NotificationItemModel, toNotificationItem, TABS } from './notification.types';
@@ -91,8 +83,7 @@ export default function NotificationContent() {
     }
 
     return (
-      <FlatList
-        data={listData}
+      <FlashList data={listData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           if (item.isSectionHeader) {
