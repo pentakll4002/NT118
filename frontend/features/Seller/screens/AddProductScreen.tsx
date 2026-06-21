@@ -201,7 +201,11 @@ const AddProductScreen: React.FC = () => {
       <AddProductHeader onBackPress={() => router.back()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <ProductImagesSection images={images} onImagesChange={setImages} />
+        <ProductImagesSection 
+          images={images} 
+          variantImages={variants.map(v => v.imageUrl).filter((url): url is string => !!url)} 
+          onImagesChange={setImages} 
+        />
         <ProductDetailsSection
           name={name}
           description={description}

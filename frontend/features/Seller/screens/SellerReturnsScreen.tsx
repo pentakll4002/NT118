@@ -1,5 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -89,8 +90,7 @@ export default function SellerReturnsScreen() {
           <ActivityIndicator size="large" color="#F73658" />
         </View>
       ) : (
-        <FlatList
-          data={returns}
+        <FlashList data={returns}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}

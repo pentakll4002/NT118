@@ -1,15 +1,6 @@
+import { FlashList } from '@shopify/flash-list';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Text,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, ActivityIndicator, Text, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProductHeader from '../components/products/ProductHeader';
@@ -221,8 +212,7 @@ const ProductListScreen: React.FC = () => {
           <ActivityIndicator size="large" color="#3b82f6" style={{ marginTop: 40 }} />
         </View>
       ) : (
-        <FlatList
-          data={filteredProducts}
+        <FlashList data={filteredProducts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <ProductCard
