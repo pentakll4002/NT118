@@ -135,6 +135,7 @@ export interface CreateProductVariantPayload {
   priceModifier: number;
   stockQuantity: number;
   sku?: string;
+  imageUrl?: string;
 }
 
 export interface CreateSellerProductResponse {

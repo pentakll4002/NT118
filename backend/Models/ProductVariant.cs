@@ -9,6 +9,7 @@ public class ProductVariant
     public decimal PriceModifier { get; set; }
     public int StockQuantity { get; set; }
     public string? Sku { get; set; }
+    public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public Product Product { get; set; } = null!;

@@ -317,6 +317,9 @@ public class CreateProductVariantRequest
 
     [MaxLength(100)]
     public string? Sku { get; set; }
+
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
 }
 
 public record ShopResponse(

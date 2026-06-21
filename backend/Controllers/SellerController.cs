@@ -157,6 +157,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 x.Status,
                 MainImageUrl = x.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() 
                                ?? x.Images.OrderBy(i => i.SortOrder).Select(i => i.ImageUrl).FirstOrDefault()
+                               ?? x.Variants.Where(v => v.ImageUrl != null).Select(v => v.ImageUrl).FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
@@ -193,7 +194,8 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                     v.Value,
                     v.PriceModifier,
                     v.StockQuantity,
-                    v.Sku
+                    v.Sku,
+                    v.ImageUrl
                 }).ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -246,6 +248,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 PriceModifier = v.PriceModifier,
                 StockQuantity = v.StockQuantity,
                 Sku = v.Sku,
+                ImageUrl = v.ImageUrl,
                 CreatedAt = now
             }).ToList();
         }
@@ -326,6 +329,7 @@ public class SellerController(AppDbContext db, INotificationRealtimeService noti
                 PriceModifier = v.PriceModifier,
                 StockQuantity = v.StockQuantity,
                 Sku = v.Sku,
+                ImageUrl = v.ImageUrl,
                 CreatedAt = now
             }).ToList();
         }

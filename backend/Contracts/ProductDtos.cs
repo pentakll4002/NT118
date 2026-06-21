@@ -31,7 +31,7 @@ public record ProductListItemResponse(
 
 public record ProductImageResponse(long Id, string ImageUrl, string? AltText, int SortOrder, bool IsMain);
 
-public record ProductVariantResponse(long Id, string Name, string Value, decimal PriceModifier, int StockQuantity, string? Sku);
+public record ProductVariantResponse(long Id, string Name, string Value, decimal PriceModifier, int StockQuantity, string? Sku, string? ImageUrl);
 
 public record ProductDetailResponse(
     long Id,

@@ -231,6 +231,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.PriceModifier).HasColumnName("price_modifier");
             e.Property(x => x.StockQuantity).HasColumnName("stock_quantity");
             e.Property(x => x.Sku).HasColumnName("sku").HasMaxLength(100);
+            e.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(500);
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
 
             e.HasOne(x => x.Product)

@@ -358,6 +358,9 @@ using (var scope = app.Services.CreateScope())
 
         ALTER TABLE wallets
             ADD COLUMN IF NOT EXISTS coin_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00;
+
+        ALTER TABLE product_variants
+            ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);
     ");
 
     

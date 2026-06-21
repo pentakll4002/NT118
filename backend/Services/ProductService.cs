@@ -98,7 +98,7 @@ public class ProductService(AppDbContext db) : IProductService
             .Where(x => x.ProductId == product.Id)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Value)
-            .Select(x => new ProductVariantResponse(x.Id, x.Name, x.Value, x.PriceModifier, x.StockQuantity, x.Sku))
+            .Select(x => new ProductVariantResponse(x.Id, x.Name, x.Value, x.PriceModifier, x.StockQuantity, x.Sku, x.ImageUrl))
             .ToListAsync(cancellationToken);
 
         return new ProductDetailResponse(
@@ -269,8 +269,21 @@ public class ProductService(AppDbContext db) : IProductService
             .Select(x => new { x.ProductId, x.ImageUrl })
             .ToListAsync(cancellationToken);
 
+        var variantImageRows = await db.ProductVariants
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.ProductId) && x.ImageUrl != null)
+            .OrderBy(x => x.Id)
+            .Select(x => new { x.ProductId, x.ImageUrl })
+            .ToListAsync(cancellationToken);
+
         var map = new Dictionary<long, string?>();
         foreach (var row in imageRows)
+        {
+            if (!map.ContainsKey(row.ProductId))
+                map[row.ProductId] = row.ImageUrl;
+        }
+
+        foreach (var row in variantImageRows)
         {
             if (!map.ContainsKey(row.ProductId))
                 map[row.ProductId] = row.ImageUrl;
