@@ -48,7 +48,7 @@ const ChatDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const flatListRef = useRef<FlashList>(null);
+  const flatListRef = useRef<any>(null);
 
   // Load current user ID
   useEffect(() => {

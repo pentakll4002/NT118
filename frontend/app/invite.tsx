@@ -22,7 +22,7 @@ export default function InviteHandler() {
       } catch (e: any) {
         Alert.alert('Lỗi', e.response?.data?.message || 'Không thể áp dụng mã giới thiệu này');
       } finally {
-        router.replace('/missions');
+        router.replace('/missions' as any);
       }
     };
 

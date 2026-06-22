@@ -20,7 +20,7 @@ export default function ReferralScreen() {
     try {
       const profile = await userApi.getProfile();
       // Use username as referral code if available, otherwise just use id (simulated)
-      setCode(profile?.username || profile?.email?.split('@')[0] || 'SHOPEELITE');
+      setCode(profile?.name || profile?.email?.split('@')[0] || 'SHOPEELITE');
     } catch (e) {
       setCode('SHOPEELITE');
     } finally {

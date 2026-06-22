@@ -231,7 +231,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const listRef = useRef<FlashList<ChatMessage>>(null);
+  const listRef = useRef<any>(null);
 
   const sortedMessages = useMemo(() => messages, [messages]);
 

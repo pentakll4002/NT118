@@ -195,10 +195,6 @@ export default function SearchResultsScreen() {
               )
             }
             renderItem={renderItem}
-            removeClippedSubviews={true}
-            initialNumToRender={6}
-            maxToRenderPerBatch={10}
-            windowSize={10}
           />
         )}
       </View>
